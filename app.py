@@ -32,10 +32,7 @@ module = st.sidebar.selectbox(
 # =========================================================
 def run_phoi_the():
     st.title("📘 Phân hệ Phôi Thẻ – GTCG")
-    import streamlit as st
-import pandas as pd
-import numpy as np
-from io import BytesIO
+   
 
 st.set_page_config(page_title="GTCG - Xử lý phôi thẻ", layout="wide")
 

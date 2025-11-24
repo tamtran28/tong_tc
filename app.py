@@ -4,7 +4,7 @@ import streamlit as st
 from module.phoi_the import run_phoi_the
 from module.chuyen_tien import run_chuyen_tien
 from module.to_khai_hq import run_to_khai_hq
-from module.tin_dung import run_tin_dung
+from module.tindung import run_tin_dung
 from module.hdv import run_hdv
 from module.ngoai_te_vang import run_ngoai_te_vang
 

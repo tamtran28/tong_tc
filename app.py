@@ -7,7 +7,7 @@ from module.to_khai_hq import run_to_khai_hq
 from module.tindung import run_tin_dung
 from module.hdv import run_hdv
 from module.ngoai_te_vang import run_ngoai_te_vang
-
+from module.DVKH import run_dvkh_5_tieuchi
 st.set_page_config(page_title="Hệ thống Kiểm toán tổng hợp", layout="wide")
 
 st.title("📊 HỆ THỐNG KIỂM TOÁN TỔNG HỢP – TẤT CẢ PHÂN HỆ")
@@ -23,6 +23,7 @@ tab1, tab2, tab3, tab4, tab5, tab6 = st.tabs([
     "🏦 Tiêu chí tín dụng CRM4–32",
     "💼 HDV (TC1 – TC3)",
     "🌏 Ngoại tệ & Vàng (TC5 – TC6)"
+    "🌏 DVKH"
 ])
 
 with tab1:

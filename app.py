@@ -8,7 +8,7 @@ from module.tindung import run_tin_dung
 from module.hdv import run_hdv
 from module.ngoai_te_vang import run_ngoai_te_vang
 from module.DVKH import run_dvkh_5_tieuchi
-from module.tieuchithe import run_the_module
+from module.tieuchithe import run_module_the
 
 st.set_page_config(page_title="Hệ thống Kiểm toán tổng hợp", layout="wide")
 
@@ -51,4 +51,4 @@ with tab7:
     run_dvkh_5_tieuchi()
 
 with tab8:
-    run_the_module()
+    run_module_the()

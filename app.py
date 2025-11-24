@@ -32,14 +32,8 @@ module = st.sidebar.selectbox(
 # =========================================================
 def run_phoi_the():
     st.title("📘 Phân hệ Phôi Thẻ – GTCG")
-   
-
-st.set_page_config(page_title="GTCG - Xử lý phôi thẻ", layout="wide")
-
-st.title("📘 Hệ thống xử lý dữ liệu Phôi Thẻ – GTCG")
-
-
-# ======================
+    st.set_page_config(page_title="GTCG - Xử lý phôi thẻ", layout="wide")
+    # ======================
 # 1) USER INPUT
 # ======================
 sol_kiem_toan = st.text_input("Nhập mã SOL kiểm toán (ví dụ: 1002):", "")
@@ -217,6 +211,9 @@ if sol_kiem_toan and uploaded_file1 and uploaded_file2:
 
 else:
     st.info("Vui lòng nhập mã SOL và tải cả 2 file Excel.")
+
+
+
     # uploaded_file1 = st.file_uploader("Tải file GTCG1_1002.xlsx", type=["xlsx"])
     # uploaded_file2 = st.file_uploader("Tải file GTCG2_1002.xlsx", type=["xlsx"])
 

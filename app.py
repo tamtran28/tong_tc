@@ -32,194 +32,381 @@ module = st.sidebar.selectbox(
 # =========================================================
 def run_phoi_the():
     st.title("📘 Phân hệ Phôi Thẻ – GTCG")
+    import streamlit as st
+import pandas as pd
+import numpy as np
+from io import BytesIO
 
-    uploaded_file1 = st.file_uploader("Tải file GTCG1_1002.xlsx", type=["xlsx"])
-    uploaded_file2 = st.file_uploader("Tải file GTCG2_1002.xlsx", type=["xlsx"])
+st.set_page_config(page_title="GTCG - Xử lý phôi thẻ", layout="wide")
 
-    if uploaded_file1 and uploaded_file2:
-        st.success("✔ Đã tải đủ 2 file. Bấm **Xử lý dữ liệu** để tiếp tục.")
+st.title("📘 Hệ thống xử lý dữ liệu Phôi Thẻ – GTCG")
 
-        if st.button("🚀 Xử lý dữ liệu"):
-            # ==============================
-            # 1. XỬ LÝ FILE 1
-            # ==============================
-            df = pd.read_excel(uploaded_file1, dtype={'ACC_NO': str})
 
-            df["ACC_NO"] = df["ACC_NO"].astype(str)
-            df["INVT_TRAN_DATE"] = pd.to_datetime(df["INVT_TRAN_DATE"])
-            df.sort_values(by="INVT_SRL_NUM", ascending=True, inplace=True)
-            df.reset_index(drop=True, inplace=True)
+# ======================
+# 1) USER INPUT
+# ======================
+sol_kiem_toan = st.text_input("Nhập mã SOL kiểm toán (ví dụ: 1002):", "")
 
-            # (1) Số lần in hỏng
-            failure_mask = (df["PASSBOOK_STATUS"] == "F") & (df["INVT_LOCN_CODE_TO"] == "IS")
-            total_failure_counts = df.loc[failure_mask, "ACC_NO"].map(
-                df.loc[failure_mask, "ACC_NO"].value_counts()
-            )
-            df["Số lần in hỏng"] = total_failure_counts.fillna(0).astype(int)
+uploaded_file1 = st.file_uploader("Tải file GTCG1_<sol>.xlsx", type=["xlsx"])
+uploaded_file2 = st.file_uploader("Tải file GTCG2_<sol>.xlsx", type=["xlsx"])
 
-            # (2) TTK in hỏng nhiều lần trong 1 ngày
-            df["TRAN_DATE_ONLY"] = df["INVT_TRAN_DATE"].dt.date
-            df["daily_failures"] = 0
-            df.loc[failure_mask, "daily_failures"] = (
-                df[failure_mask]
-                .groupby(["ACC_NO", "TRAN_DATE_ONLY"])["ACC_NO"]
-                .transform("count")
-            )
-            df["TTK in hỏng nhiều lần trong 01 ngày"] = np.where(
-                df["daily_failures"] >= 2, "X", ""
-            )
-            df.drop(columns=["daily_failures"], inplace=True)
+if sol_kiem_toan and uploaded_file1 and uploaded_file2:
+    st.success("✔ Đã nhập mã SOL & tải đủ 2 file.")
 
-            # (3) In hết dòng
-            hetdong_mask = (df["PASSBOOK_STATUS"] == "U") & (df["INVT_LOCN_CODE_TO"] == "IS")
-            df["Số lần in hết dòng"] = (
-                df.loc[hetdong_mask, "ACC_NO"]
-                .map(df.loc[hetdong_mask, "ACC_NO"].value_counts())
-                .fillna(0)
-                .astype(int)
-            )
+    if st.button("🚀 Xử lý dữ liệu"):
+        prefix_tbl = f"{sol_kiem_toan}G"
 
-            df["daily_het_dong"] = 0
-            df.loc[hetdong_mask, "daily_het_dong"] = (
-                df[hetdong_mask]
-                .groupby(["ACC_NO", "TRAN_DATE_ONLY"])["ACC_NO"]
-                .transform("count")
-            )
+        # ================================================================
+        # 2) XỬ LÝ FILE GTCG1 (TIÊU CHÍ 1 & 2)
+        # ================================================================
+        df = pd.read_excel(uploaded_file1, dtype={"ACC_NO": str})
 
-            df["TTK in hết dòng nhiều lần trong 01 ngày"] = np.where(
-                df["daily_het_dong"] >= 2, "X", ""
-            )
-            df.drop(columns=["daily_het_dong"], inplace=True)
+        df["ACC_NO"] = df["ACC_NO"].astype(str)
+        df["INVT_TRAN_DATE"] = pd.to_datetime(df["INVT_TRAN_DATE"])
+        df.sort_values(by="INVT_SRL_NUM", ascending=True, inplace=True)
+        df.reset_index(drop=True, inplace=True)
 
-            # (4) In hỏng + hết dòng cùng ngày
-            df_temp = df.groupby(["ACC_NO", "TRAN_DATE_ONLY"]).agg({
-                "Số lần in hỏng": "sum",
-                "Số lần in hết dòng": "sum",
-            }).reset_index()
+        # (1) Số lần in hỏng
+        failure_mask = (df["PASSBOOK_STATUS"] == "F") & (df["INVT_LOCN_CODE_TO"] == "IS")
+        total_failure_counts = df.loc[failure_mask, "ACC_NO"].map(
+            df.loc[failure_mask, "ACC_NO"].value_counts()
+        )
+        df["Số lần in hỏng"] = total_failure_counts.fillna(0).astype(int)
 
-            df_temp["TTK vừa in hỏng vừa in hết dòng trong 01 ngày"] = np.where(
-                (df_temp["Số lần in hỏng"] > 0) & (df_temp["Số lần in hết dòng"] > 0),
-                "X",
-                "",
-            )
+        # (2) In hỏng nhiều lần 1 ngày
+        df["daily_failures"] = df[failure_mask].groupby(
+            ["ACC_NO", df["INVT_TRAN_DATE"].dt.date]
+        ).transform("size")
+        df["TTK in hỏng nhiều lần trong 01 ngày"] = np.where(
+            df["daily_failures"] >= 2, "X", ""
+        )
+        df.drop(columns=["daily_failures"], inplace=True)
 
-            df = pd.merge(
-                df,
-                df_temp[
-                    ["ACC_NO", "TRAN_DATE_ONLY", "TTK vừa in hỏng vừa in hết dòng trong 01 ngày"]
-                ],
-                on=["ACC_NO", "TRAN_DATE_ONLY"],
-                how="left",
-            )
+        # (3) In hết dòng
+        df["TRAN_DATE_ONLY"] = df["INVT_TRAN_DATE"].dt.date
+        hetdong_mask = (df["PASSBOOK_STATUS"] == "U") & (df["INVT_LOCN_CODE_TO"] == "IS")
 
-            df.drop(columns=["TRAN_DATE_ONLY"], inplace=True)
-            df["INVT_TRAN_DATE"] = df["INVT_TRAN_DATE"].dt.strftime("%m/%d/%Y")
+        df["Số lần in hết dòng"] = (
+            df.loc[hetdong_mask, "ACC_NO"]
+            .map(df.loc[hetdong_mask, "ACC_NO"].value_counts())
+            .fillna(0)
+            .astype(int)
+        )
 
-            # ==============================
-            # 2. XỬ LÝ FILE 2
-            # ==============================
-            sol_kiem_toan = "1002"
-            prefix_tbl = f"{sol_kiem_toan}G"
+        df["daily_het_dong"] = df[hetdong_mask].groupby(
+            ["ACC_NO", "TRAN_DATE_ONLY"]
+        )["ACC_NO"].transform("count")
+        df["TTK in hết dòng nhiều lần trong 01 ngày"] = np.where(
+            df["daily_het_dong"] >= 2, "X", ""
+        )
+        df.drop(columns=["daily_het_dong"], inplace=True)
 
-            df_muc18 = pd.read_excel(uploaded_file2)
-            df_muc18["TBL"] = df_muc18["INVT_XFER_PARTICULAR"].astype(str).str.extract(
-                f"({prefix_tbl}[^\\s/]*)"
-            )[0]
+        # (4) Vừa in hỏng + hết dòng
+        df_temp = df.groupby(["ACC_NO", "TRAN_DATE_ONLY"]).agg({
+            "Số lần in hỏng": "sum",
+            "Số lần in hết dòng": "sum",
+        }).reset_index()
 
-            df_muc18["Phôi hỏng không gắn số"] = (
-                df_muc18["INVT_LOCN_CODE_TO"]
-                .astype(str)
-                .str.contains("FAIL PRINT|FAIL", na=False)
-                & ~df_muc18["INVT_XFER_PARTICULAR"].astype(str).str.contains(prefix_tbl)
-            ).map({True: "X", False: ""})
+        df_temp["TTK vừa in hỏng vừa in hết dòng trong 01 ngày"] = np.where(
+            (df_temp["Số lần in hỏng"] > 0) & (df_temp["Số lần in hết dòng"] > 0),
+            "X",
+            "",
+        )
 
-            # (2) Số lần phát hành
-            mask_ph = (df_muc18["INVT_LOCN_CODE_TO"] == "IS") & df_muc18["TBL"].notna()
-            df_ph = df_muc18[mask_ph]
-            ph_counts = df_ph["TBL"].value_counts().to_dict()
-            df_muc18["Số lần phát hành"] = df_muc18["TBL"].map(ph_counts).fillna(0).astype(int)
+        df = df.merge(
+            df_temp[
+                ["ACC_NO", "TRAN_DATE_ONLY", "TTK vừa in hỏng vừa in hết dòng trong 01 ngày"]
+            ],
+            on=["ACC_NO", "TRAN_DATE_ONLY"],
+            how="left",
+        )
 
-            # (3) PH nhiều lần trong 1 ngày
-            df_muc18["INVT_TRAN_DATE_ONLY"] = pd.to_datetime(
-                df_muc18["INVT_TRAN_DATE"]
-            ).dt.date
+        df.drop(columns=["TRAN_DATE_ONLY"], inplace=True)
+        df["INVT_TRAN_DATE"] = df["INVT_TRAN_DATE"].dt.strftime("%m/%d/%Y")
 
-            df_is = df_muc18[df_muc18["INVT_LOCN_CODE_TO"] == "IS"]
+        # ================================================================
+        # 3) XỬ LÝ FILE GTCG2 (TIÊU CHÍ 3)
+        # ================================================================
+        df_muc18 = pd.read_excel(uploaded_file2)
 
-            count_by_tbl_date = (
-                df_is.groupby(["TBL", "INVT_TRAN_DATE_ONLY"])
-                .size()
-                .reset_index(name="count")
-            )
-            multiple_ph = count_by_tbl_date[count_by_tbl_date["count"] >= 2]
-            multiple_keys = set(zip(multiple_ph["TBL"], multiple_ph["INVT_TRAN_DATE_ONLY"]))
+        df_muc18["TBL"] = df_muc18["INVT_XFER_PARTICULAR"].astype(str).str.extract(
+            f"({prefix_tbl}[^\\s/]*)"
+        )[0]
 
-            df_muc18["PH nhiều lần trong 1 ngày"] = df_muc18.apply(
-                lambda row: "X"
-                if (
-                    row["INVT_LOCN_CODE_TO"] == "IS"
-                    and (row["TBL"], row["INVT_TRAN_DATE_ONLY"]) in multiple_keys
-                )
-                else "",
-                axis=1,
-            )
+        df_muc18["Phôi hỏng không gắn số"] = (
+            df_muc18["INVT_LOCN_CODE_TO"]
+            .astype(str)
+            .str.contains("FAIL PRINT|FAIL", na=False)
+            & ~df_muc18["INVT_XFER_PARTICULAR"].astype(str).str.contains(prefix_tbl)
+        ).map({True: "X", False: ""})
 
-            # (4) Số lần in hỏng
-            mask_hong = (
-                df_muc18["INVT_LOCN_CODE_TO"].isin(["FAIL", "FAIL PRINT"])
-                & df_muc18["TBL"].notna()
-            )
-            df_hong = df_muc18[mask_hong]
-            hong_counts = df_hong["TBL"].value_counts().to_dict()
+        # (2) Số lần phát hành
+        mask_ph = (df_muc18["INVT_LOCN_CODE_TO"] == "IS") & df_muc18["TBL"].notna()
+        df_ph = df_muc18[mask_ph]
+        ph_counts = df_ph["TBL"].value_counts().to_dict()
+        df_muc18["Số lần phát hành"] = df_muc18["TBL"].map(ph_counts).fillna(0).astype(int)
 
-            df_muc18["Số lần in hỏng"] = (
-                df_muc18["TBL"].map(hong_counts).fillna(0).astype(int)
-            )
+        # (3) PH nhiều lần trong 1 ngày
+        df_muc18["INVT_TRAN_DATE_ONLY"] = pd.to_datetime(
+            df_muc18["INVT_TRAN_DATE"]
+        ).dt.date
 
-            # (5) In hỏng nhiều lần trong 1 ngày
-            df_muc18["(5) In hỏng nhiều lần trong 1 ngày"] = ""
+        df_muc18["PH nhiều lần trong 1 ngày"] = ""
+        df_is = df_muc18[df_muc18["INVT_LOCN_CODE_TO"] == "IS"]
 
-            mask_hong_2plus = (
-                (df_muc18["INVT_LOCN_CODE_TO"] == "FAIL PRINT")
-                & (df_muc18["Số lần in hỏng"] >= 2)
-            )
-            df_fail_print = df_muc18[mask_hong_2plus]
+        df_count = df_is.groupby(["TBL", "INVT_TRAN_DATE_ONLY"]).size().reset_index(name="count")
+        multi_groups = df_count[df_count["count"] >= 2]
+        multi_keys = set(zip(multi_groups["TBL"], multi_groups["INVT_TRAN_DATE_ONLY"]))
 
-            hong_groups = (
-                df_fail_print.groupby(["TBL", "INVT_TRAN_DATE_ONLY"])
-                .filter(lambda g: len(g) >= 2)
-            )
+        df_muc18["PH nhiều lần trong 1 ngày"] = df_muc18.apply(
+            lambda r: "X"
+            if (r["INVT_LOCN_CODE_TO"] == "IS"
+                and (r["TBL"], r["INVT_TRAN_DATE_ONLY"]) in multi_keys)
+            else "",
+            axis=1,
+        )
 
-            df_muc18.loc[hong_groups.index, "(5) In hỏng nhiều lần trong 1 ngày"] = "X"
+        # (4) Số lần in hỏng
+        mask_hong = (
+            df_muc18["INVT_LOCN_CODE_TO"].isin(["FAIL", "FAIL PRINT"])
+            & df_muc18["TBL"].notna()
+        )
+        df_hong = df_muc18[mask_hong]
+        hong_counts = df_hong["TBL"].value_counts().to_dict()
+        df_muc18["Số lần in hỏng"] = df_muc18["TBL"].map(hong_counts).fillna(0).astype(int)
 
-            # (6) PH nhiều lần + có in hỏng
-            df_muc18["PH nhiều lần + có in hỏng"] = df_muc18.apply(
-                lambda row: "X"
-                if (row["Số lần phát hành"] > 1 and row["Số lần in hỏng"] > 0)
-                else "",
-                axis=1,
-            )
+        # (5) In hỏng nhiều lần trong 1 ngày
+        df_muc18["(5) In hỏng nhiều lần trong 1 ngày"] = ""
 
-            df_muc18.drop(columns=["INVT_TRAN_DATE_ONLY", "TBL"], inplace=True)
+        mask_h2 = (
+            (df_muc18["INVT_LOCN_CODE_TO"] == "FAIL PRINT")
+            & (df_muc18["Số lần in hỏng"] >= 2)
+        )
+        df_fail2 = df_muc18[mask_h2]
 
-            # ==============================
-            # 3. TẠO FILE KẾT QUẢ
-            # ==============================
-            output = io.BytesIO()
-            with pd.ExcelWriter(output, engine="xlsxwriter") as writer:
-                df.to_excel(writer, sheet_name="tieu chi 1,2", index=False)
-                df_muc18.to_excel(writer, sheet_name="tieu chi 3", index=False)
+        fail_groups = (
+            df_fail2.groupby(["TBL", "INVT_TRAN_DATE_ONLY"])
+            .filter(lambda g: len(g) >= 2)
+        )
 
-            st.success("🎯 Hoàn thành xử lý dữ liệu!")
+        df_muc18.loc[fail_groups.index, "(5) In hỏng nhiều lần trong 1 ngày"] = "X"
 
-            st.download_button(
-                label="📥 Tải về file kết quả (Phoi_the_1002.xlsx)",
-                data=output.getvalue(),
-                file_name="Phoi_the_1002.xlsx",
-                mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-            )
-    else:
-        st.info("Vui lòng tải lên cả 2 file để bắt đầu.")
+        # (6) PH nhiều lần + có in hỏng
+        df_muc18["PH nhiều lần + có in hỏng"] = df_muc18.apply(
+            lambda r: "X"
+            if (r["Số lần phát hành"] > 1 and r["Số lần in hỏng"] > 0)
+            else "",
+            axis=1,
+        )
+
+        df_muc18.drop(columns=["INVT_TRAN_DATE_ONLY", "TBL"], inplace=True)
+
+        # ================================================================
+        # 4) XUẤT FILE KẾT QUẢ
+        # ================================================================
+        output = BytesIO()
+        with pd.ExcelWriter(output, engine="xlsxwriter") as writer:
+            df.to_excel(writer, sheet_name="tieu chi 1,2", index=False)
+            df_muc18.to_excel(writer, sheet_name="tieu chi 3", index=False)
+
+        st.success("🎯 Đã xử lý dữ liệu thành công!")
+
+        st.download_button(
+            label="📥 Tải file kết quả (Phoi_the.xlsx)",
+            data=output.getvalue(),
+            file_name=f"Phoi_the_{sol_kiem_toan}.xlsx",
+            mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        )
+
+else:
+    st.info("Vui lòng nhập mã SOL và tải cả 2 file Excel.")
+    # uploaded_file1 = st.file_uploader("Tải file GTCG1_1002.xlsx", type=["xlsx"])
+    # uploaded_file2 = st.file_uploader("Tải file GTCG2_1002.xlsx", type=["xlsx"])
+
+    # if uploaded_file1 and uploaded_file2:
+    #     st.success("✔ Đã tải đủ 2 file. Bấm **Xử lý dữ liệu** để tiếp tục.")
+
+    #     if st.button("🚀 Xử lý dữ liệu"):
+    #         # ==============================
+    #         # 1. XỬ LÝ FILE 1
+    #         # ==============================
+    #         df = pd.read_excel(uploaded_file1, dtype={'ACC_NO': str})
+
+    #         df["ACC_NO"] = df["ACC_NO"].astype(str)
+    #         df["INVT_TRAN_DATE"] = pd.to_datetime(df["INVT_TRAN_DATE"])
+    #         df.sort_values(by="INVT_SRL_NUM", ascending=True, inplace=True)
+    #         df.reset_index(drop=True, inplace=True)
+
+    #         # (1) Số lần in hỏng
+    #         failure_mask = (df["PASSBOOK_STATUS"] == "F") & (df["INVT_LOCN_CODE_TO"] == "IS")
+    #         total_failure_counts = df.loc[failure_mask, "ACC_NO"].map(
+    #             df.loc[failure_mask, "ACC_NO"].value_counts()
+    #         )
+    #         df["Số lần in hỏng"] = total_failure_counts.fillna(0).astype(int)
+
+    #         # (2) TTK in hỏng nhiều lần trong 1 ngày
+    #         df["TRAN_DATE_ONLY"] = df["INVT_TRAN_DATE"].dt.date
+    #         df["daily_failures"] = 0
+    #         df.loc[failure_mask, "daily_failures"] = (
+    #             df[failure_mask]
+    #             .groupby(["ACC_NO", "TRAN_DATE_ONLY"])["ACC_NO"]
+    #             .transform("count")
+    #         )
+    #         df["TTK in hỏng nhiều lần trong 01 ngày"] = np.where(
+    #             df["daily_failures"] >= 2, "X", ""
+    #         )
+    #         df.drop(columns=["daily_failures"], inplace=True)
+
+    #         # (3) In hết dòng
+    #         hetdong_mask = (df["PASSBOOK_STATUS"] == "U") & (df["INVT_LOCN_CODE_TO"] == "IS")
+    #         df["Số lần in hết dòng"] = (
+    #             df.loc[hetdong_mask, "ACC_NO"]
+    #             .map(df.loc[hetdong_mask, "ACC_NO"].value_counts())
+    #             .fillna(0)
+    #             .astype(int)
+    #         )
+
+    #         df["daily_het_dong"] = 0
+    #         df.loc[hetdong_mask, "daily_het_dong"] = (
+    #             df[hetdong_mask]
+    #             .groupby(["ACC_NO", "TRAN_DATE_ONLY"])["ACC_NO"]
+    #             .transform("count")
+    #         )
+
+    #         df["TTK in hết dòng nhiều lần trong 01 ngày"] = np.where(
+    #             df["daily_het_dong"] >= 2, "X", ""
+    #         )
+    #         df.drop(columns=["daily_het_dong"], inplace=True)
+
+    #         # (4) In hỏng + hết dòng cùng ngày
+    #         df_temp = df.groupby(["ACC_NO", "TRAN_DATE_ONLY"]).agg({
+    #             "Số lần in hỏng": "sum",
+    #             "Số lần in hết dòng": "sum",
+    #         }).reset_index()
+
+    #         df_temp["TTK vừa in hỏng vừa in hết dòng trong 01 ngày"] = np.where(
+    #             (df_temp["Số lần in hỏng"] > 0) & (df_temp["Số lần in hết dòng"] > 0),
+    #             "X",
+    #             "",
+    #         )
+
+    #         df = pd.merge(
+    #             df,
+    #             df_temp[
+    #                 ["ACC_NO", "TRAN_DATE_ONLY", "TTK vừa in hỏng vừa in hết dòng trong 01 ngày"]
+    #             ],
+    #             on=["ACC_NO", "TRAN_DATE_ONLY"],
+    #             how="left",
+    #         )
+
+    #         df.drop(columns=["TRAN_DATE_ONLY"], inplace=True)
+    #         df["INVT_TRAN_DATE"] = df["INVT_TRAN_DATE"].dt.strftime("%m/%d/%Y")
+
+    #         # ==============================
+    #         # 2. XỬ LÝ FILE 2
+    #         # ==============================
+    #         sol_kiem_toan = "1002"
+    #         prefix_tbl = f"{sol_kiem_toan}G"
+
+    #         df_muc18 = pd.read_excel(uploaded_file2)
+    #         df_muc18["TBL"] = df_muc18["INVT_XFER_PARTICULAR"].astype(str).str.extract(
+    #             f"({prefix_tbl}[^\\s/]*)"
+    #         )[0]
+
+    #         df_muc18["Phôi hỏng không gắn số"] = (
+    #             df_muc18["INVT_LOCN_CODE_TO"]
+    #             .astype(str)
+    #             .str.contains("FAIL PRINT|FAIL", na=False)
+    #             & ~df_muc18["INVT_XFER_PARTICULAR"].astype(str).str.contains(prefix_tbl)
+    #         ).map({True: "X", False: ""})
+
+    #         # (2) Số lần phát hành
+    #         mask_ph = (df_muc18["INVT_LOCN_CODE_TO"] == "IS") & df_muc18["TBL"].notna()
+    #         df_ph = df_muc18[mask_ph]
+    #         ph_counts = df_ph["TBL"].value_counts().to_dict()
+    #         df_muc18["Số lần phát hành"] = df_muc18["TBL"].map(ph_counts).fillna(0).astype(int)
+
+    #         # (3) PH nhiều lần trong 1 ngày
+    #         df_muc18["INVT_TRAN_DATE_ONLY"] = pd.to_datetime(
+    #             df_muc18["INVT_TRAN_DATE"]
+    #         ).dt.date
+
+    #         df_is = df_muc18[df_muc18["INVT_LOCN_CODE_TO"] == "IS"]
+
+    #         count_by_tbl_date = (
+    #             df_is.groupby(["TBL", "INVT_TRAN_DATE_ONLY"])
+    #             .size()
+    #             .reset_index(name="count")
+    #         )
+    #         multiple_ph = count_by_tbl_date[count_by_tbl_date["count"] >= 2]
+    #         multiple_keys = set(zip(multiple_ph["TBL"], multiple_ph["INVT_TRAN_DATE_ONLY"]))
+
+    #         df_muc18["PH nhiều lần trong 1 ngày"] = df_muc18.apply(
+    #             lambda row: "X"
+    #             if (
+    #                 row["INVT_LOCN_CODE_TO"] == "IS"
+    #                 and (row["TBL"], row["INVT_TRAN_DATE_ONLY"]) in multiple_keys
+    #             )
+    #             else "",
+    #             axis=1,
+    #         )
+
+    #         # (4) Số lần in hỏng
+    #         mask_hong = (
+    #             df_muc18["INVT_LOCN_CODE_TO"].isin(["FAIL", "FAIL PRINT"])
+    #             & df_muc18["TBL"].notna()
+    #         )
+    #         df_hong = df_muc18[mask_hong]
+    #         hong_counts = df_hong["TBL"].value_counts().to_dict()
+
+    #         df_muc18["Số lần in hỏng"] = (
+    #             df_muc18["TBL"].map(hong_counts).fillna(0).astype(int)
+    #         )
+
+    #         # (5) In hỏng nhiều lần trong 1 ngày
+    #         df_muc18["(5) In hỏng nhiều lần trong 1 ngày"] = ""
+
+    #         mask_hong_2plus = (
+    #             (df_muc18["INVT_LOCN_CODE_TO"] == "FAIL PRINT")
+    #             & (df_muc18["Số lần in hỏng"] >= 2)
+    #         )
+    #         df_fail_print = df_muc18[mask_hong_2plus]
+
+    #         hong_groups = (
+    #             df_fail_print.groupby(["TBL", "INVT_TRAN_DATE_ONLY"])
+    #             .filter(lambda g: len(g) >= 2)
+    #         )
+
+    #         df_muc18.loc[hong_groups.index, "(5) In hỏng nhiều lần trong 1 ngày"] = "X"
+
+    #         # (6) PH nhiều lần + có in hỏng
+    #         df_muc18["PH nhiều lần + có in hỏng"] = df_muc18.apply(
+    #             lambda row: "X"
+    #             if (row["Số lần phát hành"] > 1 and row["Số lần in hỏng"] > 0)
+    #             else "",
+    #             axis=1,
+    #         )
+
+    #         df_muc18.drop(columns=["INVT_TRAN_DATE_ONLY", "TBL"], inplace=True)
+
+    #         # ==============================
+    #         # 3. TẠO FILE KẾT QUẢ
+    #         # ==============================
+    #         output = io.BytesIO()
+    #         with pd.ExcelWriter(output, engine="xlsxwriter") as writer:
+    #             df.to_excel(writer, sheet_name="tieu chi 1,2", index=False)
+    #             df_muc18.to_excel(writer, sheet_name="tieu chi 3", index=False)
+
+    #         st.success("🎯 Hoàn thành xử lý dữ liệu!")
+
+    #         st.download_button(
+    #             label="📥 Tải về file kết quả (Phoi_the_1002.xlsx)",
+    #             data=output.getvalue(),
+    #             file_name="Phoi_the_1002.xlsx",
+    #             mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    #         )
+    # else:
+    #     st.info("Vui lòng tải lên cả 2 file để bắt đầu.")
 
 
 # =========================================================

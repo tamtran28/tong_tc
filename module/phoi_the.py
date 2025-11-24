@@ -3,7 +3,8 @@ import pandas as pd
 import numpy as np
 from io import BytesIO
 
-st.set_page_config(page_title="GTCG - Xử lý phôi thẻ", layout="wide")
+def run_phoi_the():
+    st.set_page_config(page_title="GTCG - Xử lý phôi thẻ", layout="wide")
 
 st.title("📘 Hệ thống xử lý dữ liệu Phôi Thẻ – GTCG")
 

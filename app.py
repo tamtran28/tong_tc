@@ -18,7 +18,7 @@ st.title("📊 HỆ THỐNG KIỂM TOÁN TỔNG HỢP – TẤT CẢ PHÂN HỆ"
 #  MENU TABS CHÍNH
 # ============================
 
-tab1, tab2, tab3, tab4, tab5, tab6 = st.tabs([
+tab1, tab2, tab3, tab4, tab5, tab6, tab7, tab8 = st.tabs([
     "📘 Phôi Thẻ – GTCG",
     "💸 Mục 09 – Chuyển tiền",
     "📑 Tờ khai Hải quan",
@@ -46,3 +46,9 @@ with tab5:
 
 with tab6:
     run_ngoai_te_vang()
+
+with tab7:
+    run_dvkh_5_tieuchi()
+
+with tab8:
+    run_the_module()

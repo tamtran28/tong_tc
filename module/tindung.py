@@ -339,22 +339,30 @@ def process_data(
         ngay_danh_gia - df_crm4_filtered.loc[mask_r34, "VALUATION_DATE"]
     ).dt.days - 365
 
+    # df_crm4_filtered.loc[df_crm4_filtered["LOAI_TS"] == "BĐS", "SO_THANG_QUA_HAN"] = (
+    #     (ngay_danh_gia - df_crm4_filtered.loc[
+    #         df_crm4_filtered["LOAI_TS"] == "BĐS", "VALUATION_DATE"
+    #     ].dt.days)
+    #     / 31
+    #     - 18
+    # )
     df_crm4_filtered.loc[df_crm4_filtered["LOAI_TS"] == "BĐS", "SO_THANG_QUA_HAN"] = (
-        (ngay_danh_gia - df_crm4_filtered.loc[
-            df_crm4_filtered["LOAI_TS"] == "BĐS", "VALUATION_DATE"
-        ].dt.days)
-        / 31
-        - 18
+    (ngay_danh_gia - df_crm4_filtered.loc[df_crm4_filtered["LOAI_TS"] == "BĐS", "VALUATION_DATE"]).dt.days / 31
+    - 18
     )
 
-    df_crm4_filtered.loc[
-        df_crm4_filtered["LOAI_TS"].isin(["MMTB", "PTVT"]), "SO_THANG_QUA_HAN"
-    ] = (
-        (ngay_danh_gia - df_crm4_filtered.loc[
-            df_crm4_filtered["LOAI_TS"].isin(["MMTB", "PTVT"]), "VALUATION_DATE"
-        ].dt.days)
-        / 31
-        - 12
+    # df_crm4_filtered.loc[
+    #     df_crm4_filtered["LOAI_TS"].isin(["MMTB", "PTVT"]), "SO_THANG_QUA_HAN"
+    # ] = (
+    #     (ngay_danh_gia - df_crm4_filtered.loc[
+    #         df_crm4_filtered["LOAI_TS"].isin(["MMTB", "PTVT"]), "VALUATION_DATE"
+    #     ].dt.days)
+    #     / 31
+    #     - 12
+    # )
+    df_crm4_filtered.loc[df_crm4_filtered["LOAI_TS"].isin(["MMTB", "PTVT"]), "SO_THANG_QUA_HAN"] = (
+    (ngay_danh_gia - df_crm4_filtered.loc[df_crm4_filtered["LOAI_TS"].isin(["MMTB", "PTVT"]), "VALUATION_DATE"]).dt.days / 31
+    - 12
     )
 
     cif_quahan = df_crm4_filtered[df_crm4_filtered["SO_THANG_QUA_HAN"] > 0][

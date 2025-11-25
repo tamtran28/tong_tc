@@ -33,7 +33,7 @@ from module.tieuchithe import run_module_the
 # SETUP APP
 # ======================
 st.set_page_config(
-    page_title="Hệ thống Kiểm toán tổng hợp",
+    page_title="Chương trình chạy tiêu chí chọn mẫu",
     layout="wide",
     page_icon="📊"
 )

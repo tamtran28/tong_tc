@@ -54,7 +54,7 @@ st.title("📊 HỆ THỐNG KIỂM TOÁN TỔNG HỢP – KTNB")
 # ======================
 st.sidebar.title("📘 MENU PHÂN HỆ")
 
-menu = st.sidebar.radio(
+menu = st.sidebar.selectbox(
     "Chọn phân hệ:",
     [
         "📘 Phôi Thẻ – GTCG",

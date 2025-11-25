@@ -608,8 +608,8 @@ Vui lòng upload đầy đủ các file cần thiết, nhập chi nhánh, ngày 
     )
     ngay_danh_gia = pd.to_datetime(ngay_danh_gia_input)
 
-    st.sidebar.markdown("---")
-    st.sidebar.markdown("### 📂 Upload file dữ liệu")
+    st.markdown("---")
+    st.markdown("### 📂 Upload file dữ liệu")
 
     crm4_files = st.file_uploader(
         "Upload các file CRM4_Du_no_theo_tai_san_dam_bao_ALL (*.xls, *.xlsx)",
@@ -652,7 +652,7 @@ Vui lòng upload đầy đủ các file cần thiết, nhập chi nhánh, ngày 
         "Upload Muc57_1405.xlsx (Mục 57 - Chậm trả)", type=["xls", "xlsx"]
     )
 
-    run_button = st.sidebar.button("▶️ Chạy xử lý dữ liệu")
+    run_button = st.button("▶️ Chạy xử lý dữ liệu")
 
     # 2. CHẠY XỬ LÝ
     if run_button:

@@ -46,7 +46,7 @@ div[data-testid="stSidebar"] {
 </style>
 """, unsafe_allow_html=True)
 
-st.title("📊 HỆ THỐNG KIỂM TOÁN TỔNG HỢP – KTNB")
+st.title("📊 CHƯƠNG TRÌNH CHẠY TIÊU CHÍ CHỌN MẪU – KTNB")
 
 
 # ======================

@@ -592,18 +592,18 @@ Vui lòng upload đầy đủ các file cần thiết, nhập chi nhánh, ngày 
     # 1. INPUT (SIDEBAR)
     st.subheader("⚙️ Thiết lập nhập liệu")
 
-    chi_nhanh = st.sidebar.text_input(
+    chi_nhanh = st.text_input(
         "Nhập tên chi nhánh hoặc mã SOL cần lọc",
         placeholder="Ví dụ: HANOI hoặc 001",
     ).strip().upper()
 
-    dia_ban_kt_input = st.sidebar.text_input(
+    dia_ban_kt_input = st.text_input(
         "Nhập tên tỉnh/thành của đơn vị đang kiểm toán (phân cách bằng dấu phẩy)",
         placeholder="VD: Hồ Chí Minh, Long An",
     )
     dia_ban_kt = [t.strip().lower() for t in dia_ban_kt_input.split(",") if t.strip()]
 
-    ngay_danh_gia_input = st.sidebar.date_input(
+    ngay_danh_gia_input = st.date_input(
         "Ngày đánh giá", value=pd.to_datetime("2025-09-30")
     )
     ngay_danh_gia = pd.to_datetime(ngay_danh_gia_input)
@@ -611,44 +611,44 @@ Vui lòng upload đầy đủ các file cần thiết, nhập chi nhánh, ngày 
     st.sidebar.markdown("---")
     st.sidebar.markdown("### 📂 Upload file dữ liệu")
 
-    crm4_files = st.sidebar.file_uploader(
+    crm4_files = st.file_uploader(
         "Upload các file CRM4_Du_no_theo_tai_san_dam_bao_ALL (*.xls, *.xlsx)",
         type=["xls", "xlsx"],
         accept_multiple_files=True,
     )
 
-    crm32_files = st.sidebar.file_uploader(
+    crm32_files = st.file_uploader(
         "Upload các file RPT_CRM_32 (*.xls, *.xlsx)",
         type=["xls", "xlsx"],
         accept_multiple_files=True,
     )
 
-    df_muc_dich_file_upload = st.sidebar.file_uploader(
+    df_muc_dich_file_upload = st.file_uploader(
         "Upload CODE_MDSDV4.xlsx (bảng mã mục đích vay)", type=["xls", "xlsx"]
     )
 
-    df_code_tsbd_file_upload = st.sidebar.file_uploader(
+    df_code_tsbd_file_upload = st.file_uploader(
         "Upload CODE_LOAI TSBD.xlsx (bảng mã loại TSBD)", type=["xls", "xlsx"]
     )
 
-    df_giai_ngan_file_upload = st.sidebar.file_uploader(
+    df_giai_ngan_file_upload = st.file_uploader(
         "Upload Giai_ngan_tien_mat_1_ty 6.xls (giải ngân tiền mặt)",
         type=["xls", "xlsx"],
     )
 
-    df_sol_file_upload = st.sidebar.file_uploader(
+    df_sol_file_upload = st.file_uploader(
         "Upload Muc17_Lop2_TSTC 4.xlsx (Mục 17 - Tài sản)", type=["xls", "xlsx"]
     )
 
-    df_55_file_upload = st.sidebar.file_uploader(
+    df_55_file_upload = st.file_uploader(
         "Upload Muc55_1405.xlsx (Mục 55 - Tất toán)", type=["xls", "xlsx"]
     )
 
-    df_56_file_upload = st.sidebar.file_uploader(
+    df_56_file_upload = st.file_uploader(
         "Upload Muc56_1405.xlsx (Mục 56 - Giải ngân)", type=["xls", "xlsx"]
     )
 
-    df_57_file_upload = st.sidebar.file_uploader(
+    df_57_file_upload = st.file_uploader(
         "Upload Muc57_1405.xlsx (Mục 57 - Chậm trả)", type=["xls", "xlsx"]
     )
 

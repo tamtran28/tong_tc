@@ -1,123 +1,125 @@
 import streamlit as st
 import pandas as pd
-import numpy as np
-from io import BytesIO
+import io
+import re
+from datetime import datetime
 
-# ============================================
-#   MODULE TỜ KHAI HẢI QUAN – STREAMLIT
-# ============================================
+# ===============================
+# 🔹 HÀM TỰ NHẬN DIỆN & CHUYỂN ĐỊNH DẠNG NGÀY
+# ===============================
+def smart_date_parse(series):
+    """Tự động nhận diện định dạng dd-mm-yyyy hoặc mm-dd-yyyy"""
+    series = series.astype(str).str.strip()
 
-def run_to_khai_hq():
+    # Heuristic: nếu xuất hiện ngày >12 => dd-mm-yyyy
+    pattern = re.compile(r"(\d{1,2})[-/](\d{1,2})[-/](\d{4})")
+    sample = series.dropna().head(20)
+    dayfirst_detected = False
+    for val in sample:
+        m = pattern.match(val)
+        if m:
+            day, month = int(m.group(1)), int(m.group(2))
+            if day > 12:
+                dayfirst_detected = True
+                break
 
-    st.header("📄 TỜ KHAI HẢI QUAN – Mục 09 / Mục 19 / Mục 20 / Mục 21")
-
-    st.write("""
-    Đây là module xử lý **Tờ khai hải quan** phục vụ kiểm toán.  
-    Vui lòng upload đúng các file Excel theo hướng dẫn.
-    """)
-
-    # --- Upload các file ---
-    muc09_file = st.file_uploader("📁 Upload file *Mục 09 – Chuyển tiền*", type=["xls", "xlsx"])
-    muc19_file = st.file_uploader("📁 Upload file *Mục 19 – Mua/Bán ngoại tệ*", type=["xls", "xlsx"])
-    muc20_file = st.file_uploader("📁 Upload file *Mục 20 – Rate Request*", type=["xls", "xlsx"])
-    muc21_file = st.file_uploader("📁 Upload file *Mục 21 – Forward Contract*", type=["xls", "xlsx"])
-
-    if st.button("▶️ Chạy xử lý Tờ khai Hải quan"):
-        missing = []
-        if muc09_file is None: missing.append("Mục 09")
-        if muc19_file is None: missing.append("Mục 19")
-        if muc20_file is None: missing.append("Mục 20")
-        if muc21_file is None: missing.append("Mục 21")
-
-        if missing:
-            st.error("❌ Thiếu file: " + ", ".join(missing))
-            return
-
-        # ====================
-        # ĐỌC FILE
-        # ====================
-        df_m09 = pd.read_excel(muc09_file, dtype=str)
-        df_m19 = pd.read_excel(muc19_file, dtype=str)
-        df_m20 = pd.read_excel(muc20_file, dtype=str)
-        df_m21 = pd.read_excel(muc21_file, dtype=str)
-
-        st.success("✔ Đọc file thành công, bắt đầu xử lý dữ liệu...")
-
-        # ============================
-        # 1. XỬ LÝ MỤC 09 – CHUYỂN TIỀN
-        # ============================
-        df_m09_processed = df_m09.copy()
-
-        # Ví dụ: chuẩn hóa số tiền
-        if "AMOUNT" in df_m09_processed.columns:
-            df_m09_processed["AMOUNT"] = pd.to_numeric(df_m09_processed["AMOUNT"], errors="coerce")
-
-        # ============================
-        # 2. XỬ LÝ MỤC 19 – MUA BÁN NT
-        # ============================
-        df_m19_processed = df_m19.copy()
-
-        if "SOTIEN_LAI_LO" in df_m19_processed.columns:
-            df_m19_processed["SOTIEN_LAI_LO"] = pd.to_numeric(df_m19_processed["SOTIEN_LAI_LO"], errors="coerce")
-
-        df_m19_processed["LỖ > 100K"] = df_m19_processed["SOTIEN_LAI_LO"].apply(
-            lambda x: "X" if x < -100000 else ""
-        ) if "SOTIEN_LAI_LO" in df_m19_processed.columns else ""
-
-        # ============================
-        # 3. GHÉP RATE REQUEST (M20 & M21)
-        # ============================
-        df_merge_rate = pd.merge(
-            df_m20, df_m21,
-            left_on="TRAN_ID", right_on="FRWRD_CNTRCT_NUM",
-            how="left"
-        )
-
-        # ============================
-        # 4. HIỂN THỊ KẾT QUẢ
-        # ============================
-        st.subheader("📌 KẾT QUẢ XỬ LÝ")
-
-        tab1, tab2, tab3, tab4 = st.tabs([
-            "Mục 09 – Chuyển tiền",
-            "Mục 19 – Mua bán NT",
-            "Mục 20 – Rate Request",
-            "Ghép Mục 20 + 21"
-        ])
-
-        with tab1:
-            st.dataframe(df_m09_processed)
-
-        with tab2:
-            st.dataframe(df_m19_processed)
-
-        with tab3:
-            st.dataframe(df_m20)
-
-        with tab4:
-            st.dataframe(df_merge_rate)
-
-        # ============================
-        # XUẤT FILE EXCEL
-        # ============================
-        buffer = BytesIO()
-        with pd.ExcelWriter(buffer, engine="openpyxl") as writer:
-            df_m09_processed.to_excel(writer, sheet_name="Muc09", index=False)
-            df_m19_processed.to_excel(writer, sheet_name="Muc19", index=False)
-            df_m20.to_excel(writer, sheet_name="Muc20", index=False)
-            df_merge_rate.to_excel(writer, sheet_name="Muc20_21_Merge", index=False)
-
-        buffer.seek(0)
-
-        st.download_button(
-            "⬇️ Tải file Tổng hợp Tờ khai HQ",
-            data=buffer,
-            file_name="To_khai_hai_quan.xlsx",
-            mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-        )
-
-        st.success("🎉 Hoàn tất module Tờ khai Hải quan!")
+    # Parse theo kết quả phát hiện
+    return pd.to_datetime(series, errors='coerce', dayfirst=dayfirst_detected, infer_datetime_format=True)
 
 
-# END MODULE
+# ===============================
+# 🔹 HÀM XỬ LÝ NGHIỆP VỤ TKHQ
+# ===============================
+def process_tkhq_data(df, ngay_kiem_toan):
+    """
+    Hàm xử lý logic TKHQ: chuyển ngày, tính quá hạn, xác định gia hạn.
+    """
+    # --- 1. Chuẩn hóa tên cột ---
+    df.columns = df.columns.str.strip().str.upper()
 
+    # --- 2. Chuyển định dạng ngày (tự nhận diện) ---
+    df['DECLARATION_DUE_DATE'] = smart_date_parse(df.get('DECLARATION_DUE_DATE'))
+    df['DECLARATION_RECEIVED_DATE'] = smart_date_parse(df.get('DECLARATION_RECEIVED_DATE'))
+
+    # --- 3. (1) Không nhập ngày đến hạn TKHQ ---
+    df['KHÔNG NHẬP NGÀY ĐẾN HẠN TKHQ'] = df['DECLARATION_DUE_DATE'].isna().map(lambda x: 'X' if x else '')
+
+    # --- 4. (2) Số ngày quá hạn TKHQ ---
+    df['SỐ NGÀY QUÁ HẠN TKHQ'] = df.apply(
+        lambda row: (ngay_kiem_toan - row['DECLARATION_DUE_DATE']).days
+        if pd.notnull(row['DECLARATION_DUE_DATE'])
+        and pd.isnull(row['DECLARATION_RECEIVED_DATE'])
+        and (ngay_kiem_toan - row['DECLARATION_DUE_DATE']).days > 0
+        else '',
+        axis=1
+    )
+
+    # --- 5. (3) Quá hạn nhưng chưa nhập TKHQ ---
+    so_ngay_qua_han_numeric = pd.to_numeric(df['SỐ NGÀY QUÁ HẠN TKHQ'], errors='coerce')
+    df['QUÁ HẠN CHƯA NHẬP TKHQ'] = so_ngay_qua_han_numeric.apply(lambda x: 'X' if pd.notnull(x) and x > 0 else '')
+
+    # --- 6. (4) Quá hạn >90 ngày nhưng chưa nhập TKHQ ---
+    df['QUÁ HẠN > 90 NGÀY CHƯA NHẬP TKHQ'] = so_ngay_qua_han_numeric.apply(lambda x: 'X' if pd.notnull(x) and x > 90 else '')
+
+    # --- 7. (5) Có phát sinh gia hạn TKHQ ---
+    def check_gia_han(row):
+        if 'AUDIT_DATE2' in row and pd.notnull(row['AUDIT_DATE2']):
+            return 'X'
+        if 'DECLARATION_REF_NO' in row and isinstance(row['DECLARATION_REF_NO'], str):
+            text = row['DECLARATION_REF_NO'].lower().replace(" ", "")
+            if 'giahan' in text:
+                return 'X'
+        return ''
+
+    df['CÓ PHÁT SINH GIA HẠN TKHQ'] = df.apply(check_gia_han, axis=1)
+
+    return df
+
+
+# ===============================
+# 🔹 GIAO DIỆN STREAMLIT
+# ===============================
+def run to_khai_hq()
+    st.set_page_config(layout="wide")
+    st.title("📊 Ứng dụng Phân tích Tờ khai Hải quan (TKHQ)")
+    
+    with st.sidebar:
+        st.header("Cài đặt và Tải file")
+        uploaded_file = st.file_uploader("📁 Chọn file Excel cần phân tích", type=['xlsx'])
+        audit_date = st.date_input("📅 Chọn ngày kiểm toán", value=datetime(2025, 5, 31))
+    
+    # ===============================
+    # 🔹 PHẦN XỬ LÝ CHÍNH
+    # ===============================
+    if uploaded_file is not None:
+        st.info(f"Đã tải lên file: **{uploaded_file.name}**")
+    
+        if st.button("🚀 Bắt đầu xử lý", type="primary"):
+            with st.spinner("Đang đọc và xử lý dữ liệu... Vui lòng chờ."):
+                try:
+                    df_raw = pd.read_excel(uploaded_file)
+                    ngay_kiem_toan_pd = pd.to_datetime(audit_date)
+    
+                    # --- Gọi hàm xử lý ---
+                    df_processed = process_tkhq_data(df_raw, ngay_kiem_toan_pd)
+    
+                    st.success("✅ Xử lý hoàn tất!")
+                    st.subheader("📋 Kết quả phân tích")
+                    st.dataframe(df_processed)
+    
+                    # --- Xuất Excel với format ngày chuẩn ---
+                    output_buffer = io.BytesIO()
+                    with pd.ExcelWriter(output_buffer, engine='openpyxl', date_format='DD-MM-YYYY') as writer:
+                        df_processed.to_excel(writer, index=False, sheet_name='ket_qua_TKHQ')
+    
+                    st.download_button(
+                        label="📥 Tải xuống kết quả Excel",
+                        data=output_buffer.getvalue(),
+                        file_name=f"ket_qua_TKHQ_{audit_date.strftime('%d%m%Y')}.xlsx",
+                        mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+                    )
+    
+                except Exception as e:
+                    st.error(f"❌ Đã có lỗi xảy ra: {e}")
+    else:
+        st.info("⬆️ Vui lòng tải lên một file Excel để bắt đầu.")

@@ -79,7 +79,7 @@ def process_tkhq_data(df, ngay_kiem_toan):
 # ===============================
 # 🔹 GIAO DIỆN STREAMLIT
 # ===============================
-def run to_khai_hq()
+def run_to_khai_hq()
     st.set_page_config(layout="wide")
     st.title("📊 Ứng dụng Phân tích Tờ khai Hải quan (TKHQ)")
     

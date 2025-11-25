@@ -590,7 +590,7 @@ Vui lòng upload đầy đủ các file cần thiết, nhập chi nhánh, ngày 
     )
 
     # 1. INPUT (SIDEBAR)
-    st.sidebar.header("⚙️ Thiết lập nhập liệu")
+    st.sidebar("⚙️ Thiết lập nhập liệu")
 
     chi_nhanh = st.sidebar.text_input(
         "Nhập tên chi nhánh hoặc mã SOL cần lọc",

@@ -582,15 +582,15 @@ def process_data(
 def run_tin_dung():
     st.title("📊 HỆ THỐNG TỔNG HỢP & ĐỐI CHIẾU DỮ LIỆU CRM4 – CRM32")
 
-    st.markdown(
-        """
-Ứng dụng này chuyển toàn bộ quy trình xử lý Excel của bạn sang giao diện **Streamlit**.  
-Vui lòng upload đầy đủ các file cần thiết, nhập chi nhánh, ngày đánh giá và địa bàn kiểm toán.
-"""
-    )
+#     st.markdown(
+#         """
+# Ứng dụng này chuyển toàn bộ quy trình xử lý Excel của bạn sang giao diện **Streamlit**.  
+# Vui lòng upload đầy đủ các file cần thiết, nhập chi nhánh, ngày đánh giá và địa bàn kiểm toán.
+# """
+#     )
 
-    # 1. INPUT (SIDEBAR)
-    st.header("⚙️ Thiết lập nhập liệu")
+#     # 1. INPUT (SIDEBAR)
+#     st.header("⚙️ Thiết lập nhập liệu")
 
     chi_nhanh = st.text_input(
         "Nhập tên chi nhánh hoặc mã SOL cần lọc",

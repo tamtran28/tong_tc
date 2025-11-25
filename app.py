@@ -86,7 +86,6 @@ elif menu == "📑 Tờ khai Hải quan":
 
 elif menu == "🏦 Tiêu chí tín dụng CRM4–32":
     colored_header("🏦 TÍN DỤNG CRM4 – CRM32", "Các tiêu chí KTNB", "#FF6F00")
-    run_tin_dung()
     results = run_tin_dung(
     crm4_files,
     crm32_files,

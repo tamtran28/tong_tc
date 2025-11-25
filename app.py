@@ -86,20 +86,7 @@ elif menu == "📑 Tờ khai Hải quan":
 
 elif menu == "🏦 Tiêu chí tín dụng CRM4–32":
     colored_header("🏦 TÍN DỤNG CRM4 – CRM32", "Các tiêu chí KTNB", "#FF6F00")
-    results = run_tin_dung(
-    crm4_files,
-    crm32_files,
-    df_muc_dich_file_upload,
-    df_code_tsbd_file_upload,
-    df_giai_ngan_file_upload,
-    df_sol_file_upload,
-    df_55_file_upload,
-    df_56_file_upload,
-    df_57_file_upload,
-    chi_nhanh,
-    ngay_danh_gia,
-    dia_ban_kt
-)
+   
 elif menu == "💼 HDV (TC1 – TC3)":
     colored_header("💼 HDV – TC1 đến TC3", "Kiểm tra hoạt động vay", "#795548")
     run_hdv()

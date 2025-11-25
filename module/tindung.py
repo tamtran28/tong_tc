@@ -656,15 +656,4 @@ def run_tin_dung():
     
     else:
         st.info("👈 Vui lòng upload đầy đủ file, nhập chi nhánh / ngày đánh giá / địa bàn, rồi bấm **“Chạy xử lý dữ liệu”** ở sidebar.")
-    return {
-        "df_crm4_filtered": df_crm4_filtered,
-        "pivot_final": pivot_final,
-        "pivot_merge": pivot_merge,
-        "df_crm32_filtered": df_crm32_filtered,
-        "pivot_full": pivot_full,
-        "pivot_mucdich": pivot_mucdich,
-        "df_delay": df_delay,
-        "df_gop": df_gop,
-        "df_count": df_count,
-        "df_bds_matched": df_17_f
-    }
+    

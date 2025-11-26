@@ -105,11 +105,7 @@ elif menu == "👥 DVKH (5 tiêu chí)":
 elif menu == "💳 Tiêu chí thẻ":
     colored_header("💳 TIÊU CHÍ THẺ", "Các tiêu chí kiểm toán thẻ", "#009688")
     run_module_the()
-
-elif menu == "💳 Tiêu chí thẻ":
-    colored_header("💳 TIÊU CHÍ THẺ", "Các tiêu chí kiểm toán thẻ", "#009688")
-     run_module_pos()
-    
+ 
 elif menu == "💳 Tiêu chí máy pos":
     colored_header("💳 TIÊU CHÍ MÁY POS", "Các tiêu chí kiểm toán máy pos", "#009688")
     run_module_pos()

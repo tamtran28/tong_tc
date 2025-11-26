@@ -64,7 +64,8 @@ menu = st.sidebar.selectbox(
         "💼 HDV (TC1 – TC3)",
         "🌏 Ngoại tệ & Vàng (TC5 – TC6)",
         "👥 DVKH (5 tiêu chí)",
-        "💳 Tiêu chí thẻ"
+        "💳 Tiêu chí thẻ",
+        "Tiêu chí máy Pos"
     ]
 )
 
@@ -103,4 +104,9 @@ elif menu == "👥 DVKH (5 tiêu chí)":
 elif menu == "💳 Tiêu chí thẻ":
     colored_header("💳 TIÊU CHÍ THẺ", "Các tiêu chí kiểm toán thẻ", "#009688")
     run_module_the()
+
+elif menu == "💳 Tiêu chí máy pos":
+    colored_header("💳 TIÊU CHÍ MÁY POS", "Các tiêu chí kiểm toán máy pos", "#009688")
+    run_module_pos()
+
 

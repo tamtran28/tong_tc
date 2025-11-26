@@ -17,7 +17,7 @@ def run_dvkh_5_tieuchi():
     with tab1:
         st.header("1️⃣ Upload dữ liệu đầu vào")
 
-        file_dksms = st.file_uploader("Upload Muc14_DKSMS.txt", type=["txt","xlsx"])
+        file_dksms = st.file_uploader("Upload Muc14_DKSMS.txt,xlsx", type=["txt", "xlsx"])
         file_scm10 = st.file_uploader("Upload Muc14_SCM010.xlsx", type=["xlsx"])
         file_42a = st.file_uploader("Upload HDV_CHITIET_KKH_*.xls (4.2.a)", type=["xls"], accept_multiple_files=True)
         file_42b = st.file_uploader("Upload BC_LAY_CHARGELEVELCODE_THEO_KHCN.xlsx", type=["xlsx"])

@@ -27,7 +27,7 @@ from module.hdv import run_hdv
 from module.ngoai_te_vang import run_ngoai_te_vang
 from module.DVKH import run_dvkh_5_tieuchi
 from module.tieuchithe import run_module_the
-
+from module.pos import run_module_pos
 
 # ======================
 # SETUP APP

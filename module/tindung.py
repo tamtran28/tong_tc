@@ -870,7 +870,7 @@ def run_tin_dung():
         buffer.seek(0)
 
         st.download_button(
-            label="⬇️ Tải file KQ_1405_.xlsx",
+            label="⬇️ Tải file KQ_tindung_.xlsx",
             data=buffer,
             file_name="KQ_tindung.xlsx",
             mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",

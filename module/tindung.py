@@ -649,13 +649,12 @@ def run_tin_dung():
             "4️⃣ CODE_LOAI_TSBD.xlsx (Bảng mã loại TSBD)",
             type=["xls", "xlsx"],
         )
-    
-    with col2:
         df_giai_ngan_file_upload = st.file_uploader(
             "5️⃣ Giai_ngan_tien_mat_1_ty 6.xls",
             type=["xls", "xlsx"],
         )
     
+    with col2:
         df_sol_file_upload = st.file_uploader(
             "6️⃣ Muc17_Lop2_TSTC 4.xlsx (Mục 17 - Tài sản)",
             type=["xls", "xlsx"],

@@ -29,6 +29,7 @@ from module.DVKH import run_dvkh_5_tieuchi
 from module.tieuchithe import run_module_the
 from module.module_pos import run_module_pos
 
+
 # ======================
 # SETUP APP
 # ======================
@@ -105,8 +106,9 @@ elif menu == "💳 Tiêu chí thẻ":
     colored_header("💳 TIÊU CHÍ THẺ", "Các tiêu chí kiểm toán thẻ", "#009688")
     run_module_the()
 
-elif menu == "💳 Tiêu chí máy pos":
+elif menu == "💳 Tiêu chí máy pos:":
     colored_header("💳 TIÊU CHÍ MÁY POS", "Các tiêu chí kiểm toán máy pos", "#009688")
     run_module_pos()
+
 
 

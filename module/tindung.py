@@ -596,69 +596,147 @@ def run_tin_dung():
 # Vui lòng upload đầy đủ các file cần thiết, nhập chi nhánh, ngày đánh giá và địa bàn kiểm toán.
 # """
 #     )
+    st.markdown("### 📝 Nhập tham số")
 
+    colA, colB = st.columns(2)
+    
+    with colA:
+        chi_nhanh = st.text_input(
+            "Nhập tên chi nhánh hoặc mã SOL cần lọc",
+            placeholder="Ví dụ: HANOI hoặc 001",
+        ).strip().upper()
+    
+        ngay_danh_gia_input = st.date_input(
+            "Ngày đánh giá", value=pd.to_datetime("2025-09-30")
+        )
+        ngay_danh_gia = pd.to_datetime(ngay_danh_gia_input)
+    
+    with colB:
+        dia_ban_kt_input = st.text_input(
+            "Nhập tên tỉnh/thành của đơn vị (phân cách bằng dấu phẩy)",
+            placeholder="VD: Hồ Chí Minh, Long An",
+        )
+        dia_ban_kt = [t.strip().lower() for t in dia_ban_kt_input.split(",") if t.strip()]
+    
+    st.markdown("---")
+    st.markdown("### 📂 Upload file dữ liệu")
+    
+    # ==========================================
+    #  UPLOAD FILE – CHIA 2 CỘT ĐẸP
+    # ==========================================
+    
+    col1, col2 = st.columns(2)
+    
+    with col1:
+        crm4_files = st.file_uploader(
+            "1️⃣ CRM4_Du_no_theo_tai_san_dam_bao_ALL",
+            type=["xls", "xlsx"],
+            accept_multiple_files=True,
+        )
+    
+        crm32_files = st.file_uploader(
+            "2️⃣ RPT_CRM_32",
+            type=["xls", "xlsx"],
+            accept_multiple_files=True,
+        )
+    
+        df_muc_dich_file_upload = st.file_uploader(
+            "3️⃣ CODE_MDSDV4.xlsx (Bảng mã mục đích vay)",
+            type=["xls", "xlsx"],
+        )
+    
+        df_code_tsbd_file_upload = st.file_uploader(
+            "4️⃣ CODE_LOAI_TSBD.xlsx (Bảng mã loại TSBD)",
+            type=["xls", "xlsx"],
+        )
+    
+    with col2:
+        df_giai_ngan_file_upload = st.file_uploader(
+            "5️⃣ Giai_ngan_tien_mat_1_ty 6.xls",
+            type=["xls", "xlsx"],
+        )
+    
+        df_sol_file_upload = st.file_uploader(
+            "6️⃣ Muc17_Lop2_TSTC 4.xlsx (Mục 17 - Tài sản)",
+            type=["xls", "xlsx"],
+        )
+    
+        df_55_file_upload = st.file_uploader(
+            "7️⃣ Muc55_1405.xlsx (Mục 55 - Tất toán)",
+            type=["xls", "xlsx"],
+        )
+    
+        df_56_file_upload = st.file_uploader(
+            "8️⃣ Muc56_1405.xlsx (Mục 56 - Giải ngân)",
+            type=["xls", "xlsx"],
+        )
+    
+        df_57_file_upload = st.file_uploader(
+            "9️⃣ Muc57_1405.xlsx (Mục 57 - Chậm trả)",
+            type=["xls", "xlsx"],
+        )
 #     # 1. INPUT (SIDEBAR)
 #     st.header("⚙️ Thiết lập nhập liệu")
 
-    chi_nhanh = st.text_input(
-        "Nhập tên chi nhánh hoặc mã SOL cần lọc",
-        placeholder="Ví dụ: HANOI hoặc 001",
-    ).strip().upper()
+    # chi_nhanh = st.text_input(
+    #     "Nhập tên chi nhánh hoặc mã SOL cần lọc",
+    #     placeholder="Ví dụ: HANOI hoặc 001",
+    # ).strip().upper()
 
-    dia_ban_kt_input = st.text_input(
-        "Nhập tên tỉnh/thành của đơn vị đang kiểm toán (phân cách bằng dấu phẩy)",
-        placeholder="VD: Hồ Chí Minh, Long An",
-    )
-    dia_ban_kt = [t.strip().lower() for t in dia_ban_kt_input.split(",") if t.strip()]
+    # dia_ban_kt_input = st.text_input(
+    #     "Nhập tên tỉnh/thành của đơn vị đang kiểm toán (phân cách bằng dấu phẩy)",
+    #     placeholder="VD: Hồ Chí Minh, Long An",
+    # )
+    # dia_ban_kt = [t.strip().lower() for t in dia_ban_kt_input.split(",") if t.strip()]
 
-    ngay_danh_gia_input = st.date_input(
-        "Ngày đánh giá", value=pd.to_datetime("2025-09-30")
-    )
-    ngay_danh_gia = pd.to_datetime(ngay_danh_gia_input)
+    # ngay_danh_gia_input = st.date_input(
+    #     "Ngày đánh giá", value=pd.to_datetime("2025-09-30")
+    # )
+    # ngay_danh_gia = pd.to_datetime(ngay_danh_gia_input)
 
-    st.markdown("---")
-    st.markdown("### 📂 Upload file dữ liệu")
+    # st.markdown("---")
+    # st.markdown("### 📂 Upload file dữ liệu")
 
-    crm4_files = st.file_uploader(
-        "Upload các file CRM4_Du_no_theo_tai_san_dam_bao_ALL (*.xls, *.xlsx)",
-        type=["xls", "xlsx"],
-        accept_multiple_files=True,
-    )
+    # crm4_files = st.file_uploader(
+    #     "Upload các file CRM4_Du_no_theo_tai_san_dam_bao_ALL (*.xls, *.xlsx)",
+    #     type=["xls", "xlsx"],
+    #     accept_multiple_files=True,
+    # )
 
-    crm32_files = st.file_uploader(
-        "Upload các file RPT_CRM_32 (*.xls, *.xlsx)",
-        type=["xls", "xlsx"],
-        accept_multiple_files=True,
-    )
+    # crm32_files = st.file_uploader(
+    #     "Upload các file RPT_CRM_32 (*.xls, *.xlsx)",
+    #     type=["xls", "xlsx"],
+    #     accept_multiple_files=True,
+    # )
 
-    df_muc_dich_file_upload = st.file_uploader(
-        "Upload CODE_MDSDV4.xlsx (bảng mã mục đích vay)", type=["xls", "xlsx"]
-    )
+    # df_muc_dich_file_upload = st.file_uploader(
+    #     "Upload CODE_MDSDV4.xlsx (bảng mã mục đích vay)", type=["xls", "xlsx"]
+    # )
 
-    df_code_tsbd_file_upload = st.file_uploader(
-        "Upload CODE_LOAI TSBD.xlsx (bảng mã loại TSBD)", type=["xls", "xlsx"]
-    )
+    # df_code_tsbd_file_upload = st.file_uploader(
+    #     "Upload CODE_LOAI TSBD.xlsx (bảng mã loại TSBD)", type=["xls", "xlsx"]
+    # )
 
-    df_giai_ngan_file_upload = st.file_uploader(
-        "Upload Giai_ngan_tien_mat_1_ty 6.xls (giải ngân tiền mặt)",
-        type=["xls", "xlsx"],
-    )
+    # df_giai_ngan_file_upload = st.file_uploader(
+    #     "Upload Giai_ngan_tien_mat_1_ty 6.xls (giải ngân tiền mặt)",
+    #     type=["xls", "xlsx"],
+    # )
 
-    df_sol_file_upload = st.file_uploader(
-        "Upload Muc17_Lop2_TSTC 4.xlsx (Mục 17 - Tài sản)", type=["xls", "xlsx"]
-    )
+    # df_sol_file_upload = st.file_uploader(
+    #     "Upload Muc17_Lop2_TSTC 4.xlsx (Mục 17 - Tài sản)", type=["xls", "xlsx"]
+    # )
 
-    df_55_file_upload = st.file_uploader(
-        "Upload Muc55_1405.xlsx (Mục 55 - Tất toán)", type=["xls", "xlsx"]
-    )
+    # df_55_file_upload = st.file_uploader(
+    #     "Upload Muc55_1405.xlsx (Mục 55 - Tất toán)", type=["xls", "xlsx"]
+    # )
 
-    df_56_file_upload = st.file_uploader(
-        "Upload Muc56_1405.xlsx (Mục 56 - Giải ngân)", type=["xls", "xlsx"]
-    )
+    # df_56_file_upload = st.file_uploader(
+    #     "Upload Muc56_1405.xlsx (Mục 56 - Giải ngân)", type=["xls", "xlsx"]
+    # )
 
-    df_57_file_upload = st.file_uploader(
-        "Upload Muc57_1405.xlsx (Mục 57 - Chậm trả)", type=["xls", "xlsx"]
-    )
+    # df_57_file_upload = st.file_uploader(
+    #     "Upload Muc57_1405.xlsx (Mục 57 - Chậm trả)", type=["xls", "xlsx"]
+    # )
 
     run_button = st.button("▶️ Chạy xử lý dữ liệu")
 

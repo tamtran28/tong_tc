@@ -2,15 +2,27 @@ import sys, os
 sys.path.append(os.path.dirname(__file__))
 sys.path.append(os.path.join(os.path.dirname(__file__), "db"))
 sys.path.append(os.path.join(os.path.dirname(__file__), "module"))
-from db.login_page import show_login_page, is_authenticated, logout
 
 import streamlit as st
-# from db.login_page import show_login_page
-# # from db.auth_db import authenticate_user
 
-# ======================
-# Hàm header có màu
-# ======================
+# ===== IMPORT LOGIN / AUTH =====
+from db.login_page import show_login_page, is_authenticated
+from db.auth_jwt import get_current_user, logout
+from db.security import require_role   # <--- IMPORT CHUẨN
+
+# ===== IMPORT MODULE NGHIỆP VỤ =====
+from module.phoi_the import run_phoi_the
+from module.chuyen_tien import run_chuyen_tien
+from module.to_khai_hq import run_to_khai_hq
+from module.tindung import run_tin_dung
+from module.hdv import run_hdv
+from module.ngoai_te_vang import run_ngoai_te_vang
+from module.DVKH import run_dvkh_5_tieuchi
+from module.tieuchithe import run_module_the
+from module.module_pos import run_module_pos
+
+
+# ===== HEADER UI =====
 def colored_header(title, subtitle="", color="#4A90E2"):
     st.markdown(
         f"""
@@ -26,17 +38,10 @@ def colored_header(title, subtitle="", color="#4A90E2"):
         unsafe_allow_html=True,
     )
 
-# ====== IMPORT CÁC MODULE NGHIỆP VỤ ======
-from module.phoi_the import run_phoi_the
-from module.chuyen_tien import run_chuyen_tien
-from module.to_khai_hq import run_to_khai_hq
-from module.tindung import run_tin_dung
-from module.hdv import run_hdv
-from module.ngoai_te_vang import run_ngoai_te_vang
-from module.DVKH import run_dvkh_5_tieuchi
-from module.tieuchithe import run_module_the
-from module.module_pos import run_module_pos
 
+# ======================
+# SETUP PAGE
+# ======================
 st.set_page_config(
     page_title="Chương trình chạy tiêu chí chọn mẫu",
     layout="wide",
@@ -55,29 +60,34 @@ div[data-testid="stSidebar"] {
 )
 
 # ======================
-# KIỂM TRA ĐĂNG NHẬP
+# KIỂM TRA ĐĂNG NHẬP — PHẢI ĐẶT TRÊN CÙNG
 # ======================
 if not is_authenticated():
-    # Nếu chưa login: chỉ hiển thị màn hình đăng nhập rồi RETURN
     show_login_page()
     st.stop()
 
-# Nếu đến đây tức là đã đăng nhập
+# Đã đăng nhập → lấy thông tin user
 user = get_current_user()
 
-# ======================
-# HEADER + SIDEBAR
-# ======================
-st.title("📊 CHƯƠNG TRÌNH CHẠY TIÊU CHÍ CHỌN MẪU – KTNB")
 
+# ======================
+# SIDEBAR
+# ======================
 with st.sidebar:
     st.title("📘 MENU PHÂN HỆ")
+
+    # Info user
     st.markdown(
         f"👤 **{user.get('full_name', user['username'])}**  \n"
         f"🔑 Quyền: **{user.get('role','user')}**"
     )
-    logout_button()  # nút đăng xuất
 
+    # Nút logout
+    if st.button("🚪 Đăng xuất"):
+        logout()
+        st.experimental_rerun()
+
+    # MENU
     menu = st.selectbox(
         "Chọn phân hệ:",
         [
@@ -93,9 +103,13 @@ with st.sidebar:
         ],
     )
 
+
 # ======================
-# RENDER TỪNG MODULE
+# HIỂN THỊ MODULE
 # ======================
+
+st.title("📊 CHƯƠNG TRÌNH CHẠY TIÊU CHÍ CHỌN MẪU – KTNB")
+
 if menu == "📘 Phôi Thẻ – GTCG":
     colored_header("📘 PHÔI THẺ – GTCG", "Module kiểm tra phôi thẻ", "#2C8DFF")
     run_phoi_the()
@@ -129,9 +143,10 @@ elif menu == "💳 Tiêu chí thẻ":
     run_module_the()
 
 elif menu == "💳 Tiêu chí máy pos":
-    require_role("pos")  # bắt buộc user phải có role POS
+    require_role("pos")   # kiểm tra quyền POS
     colored_header("💳 TIÊU CHÍ MÁY POS", "Các tiêu chí kiểm toán máy pos", "#009688")
     run_module_pos()
+
 
 
 

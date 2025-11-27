@@ -1,48 +1,101 @@
+# db/login_page.py
 import streamlit as st
-from auth_db import get_user_by_username, verify_password, init_db
-from auth_jwt import create_access_token
-from datetime import timedelta
 
-# đảm bảo có bảng users
+from db.auth_db import init_db, authenticate_user
+from db.auth_jwt import create_access_token, verify_access_token
+
+
+# Khởi tạo DB ngay khi import module
 init_db()
 
 
-def login_page():
-    st.title("🔐 Đăng nhập hệ thống KTNB")
+SESSION_TOKEN_KEY = "auth_token"
+SESSION_USER_KEY = "auth_user"
 
-    with st.form("login_form"):
-        username = st.text_input("Tên đăng nhập")
-        password = st.text_input("Mật khẩu", type="password")
-        submit = st.form_submit_button("Đăng nhập")
 
-    if submit:
-        if not username or not password:
-            st.error("Vui lòng nhập đủ tên đăng nhập và mật khẩu.")
-            return
+def is_authenticated() -> bool:
+    """
+    Kiểm tra trong session có token hợp lệ hay không.
+    """
+    token = st.session_state.get(SESSION_TOKEN_KEY)
+    if not token:
+        return False
 
-        user = get_user_by_username(username)
-        if not user:
-            st.error("❌ Không tồn tại user này.")
-            return
+    payload = verify_access_token(token)
+    if payload is None:
+        # token hết hạn hoặc lỗi -> xoá khỏi session
+        st.session_state.pop(SESSION_TOKEN_KEY, None)
+        st.session_state.pop(SESSION_USER_KEY, None)
+        return False
 
-        if not verify_password(password, user["password_hash"]):
-            st.error("❌ Sai mật khẩu.")
-            return
+    # cập nhật lại user (phòng trường hợp sửa role sau này)
+    st.session_state[SESSION_USER_KEY] = payload
+    return True
 
-        token = create_access_token(
-            {
-                "sub": user["username"],
-                "role": user["role"],
-                "full_name": user["full_name"] or user["username"],
-            },
-            expires_delta=timedelta(minutes=120),
-        )
 
-        st.session_state["access_token"] = token
-        st.session_state["username"] = user["username"]
-        st.session_state["role"] = user["role"]
-        st.session_state["full_name"] = user["full_name"] or user["username"]
-        st.session_state["logged_in"] = True
+def get_current_user():
+    return st.session_state.get(SESSION_USER_KEY)
 
-        st.success("✅ Đăng nhập thành công!")
+
+def logout_button():
+    """
+    Hiển thị nút logout ở sidebar / đầu trang
+    """
+    if st.button("🚪 Đăng xuất"):
+        st.session_state.pop(SESSION_TOKEN_KEY, None)
+        st.session_state.pop(SESSION_USER_KEY, None)
         st.experimental_rerun()
+
+
+def show_login_page():
+    """
+    Vẽ màn hình đăng nhập.
+    Gọi hàm này trong app.py nếu chưa đăng nhập.
+    """
+    st.markdown("## 🔐 Đăng nhập hệ thống KTNB")
+
+    col1, col2 = st.columns([2, 1])
+    with col1:
+        username = st.text_input("👤 Tên đăng nhập", key="login_username")
+        password = st.text_input("🔑 Mật khẩu", type="password", key="login_password")
+        login_btn = st.button("Đăng nhập", type="primary")
+
+        if login_btn:
+            if not username or not password:
+                st.error("Vui lòng nhập đủ username và password.")
+                return
+
+            user = authenticate_user(username.strip(), password)
+            if user is None:
+                st.error("Sai tên đăng nhập hoặc mật khẩu.")
+                return
+
+            # Tạo JWT token
+            token = create_access_token(
+                {
+                    "sub": user["username"],
+                    "full_name": user["full_name"],
+                    "role": user["role"],
+                }
+            )
+
+            st.session_state[SESSION_TOKEN_KEY] = token
+            st.session_state[SESSION_USER_KEY] = {
+                "username": user["username"],
+                "full_name": user["full_name"],
+                "role": user["role"],
+            }
+
+            st.success("Đăng nhập thành công! Đang chuyển vào hệ thống...")
+            st.experimental_rerun()
+
+    with col2:
+        st.info(
+            """
+**Tài khoản mặc định**  
+- User: `admin`  
+- Pass: `admin123`  
+
+Hãy đổi mật khẩu / tạo user mới trong DB nếu cần.
+"""
+        )

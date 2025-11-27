@@ -8,7 +8,33 @@ from module.module_pos import run_module_pos
 ...
 from db.seed_users import seed_users
 
+# ===== IMPORT MODULE NGHIỆP VỤ =====
+from module.phoi_the import run_phoi_the
+from module.chuyen_tien import run_chuyen_tien
+from module.to_khai_hq import run_to_khai_hq
+from module.tindung import run_tin_dung
+from module.hdv import run_hdv
+from module.ngoai_te_vang import run_ngoai_te_vang
+from module.DVKH import run_dvkh_5_tieuchi
+from module.tieuchithe import run_module_the
+from module.module_pos import run_module_pos
 
+
+# ===== HEADER UI =====
+def colored_header(title, subtitle="", color="#4A90E2"):
+    st.markdown(
+        f"""
+        <div style="border-left: 8px solid {color};
+                    padding: 8px 12px;
+                    margin-top: 15px;
+                    margin-bottom: 12px;
+                    background-color: #F5F9FF;">
+            <h2 style="margin-bottom:0;">{title}</h2>
+            <p style="margin-top:2px; opacity:0.8;">{subtitle}</p>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
 # ========== LOGIN ==========
 if not is_authenticated():
     show_login_page()

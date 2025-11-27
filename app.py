@@ -4,7 +4,7 @@ from db.auth_jwt import is_authenticated, get_current_user
 from db.security import require_role
 
 # IMPORT MODULE NGHIỆP VỤ
-from module.module_pos import run_module_pos
+# from module.module_pos import run_module_pos
 ...
 from db.seed_users import seed_users
 

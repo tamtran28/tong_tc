@@ -85,11 +85,11 @@ if user["role"] == "admin":
         create_user_form()
         st.stop()
 
-    # 2) Reset mật khẩu user
-    elif admin_menu == "🔄 Reset mật khẩu user":
-        from db.admin_user_manage import reset_password_form
-        reset_password_form()
-        st.stop()
+    # # 2) Reset mật khẩu user
+    # elif admin_menu == "🔄 Reset mật khẩu user":
+    #     from db.admin_user_manage import reset_password_form
+    #     reset_password_form()
+    #     st.stop()
 
     # 3) Xem nhật ký hoạt động
     elif admin_menu == "📜 Xem Audit Trail (nhật ký hoạt động)":

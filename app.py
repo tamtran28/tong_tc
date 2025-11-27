@@ -5,24 +5,7 @@ sys.path.append(os.path.join(os.path.dirname(__file__), "module"))
 
 import streamlit as st
 from db.login_page import show_login_page
-from db.auth_db import authenticate_user
-
-import streamlit as st
-import os
-
-def show_project_tree():
-    st.markdown("### 📁 Cấu trúc thư mục dự án")
-    tree = []
-    for root, dirs, files in os.walk(".", topdown=True):
-        level = root.replace(".", "").count(os.sep)
-        indent = "&nbsp;" * 4 * level
-        tree.append(f"{indent}📂 **{os.path.basename(root)}/**")
-        subindent = "&nbsp;" * 4 * (level + 1)
-        for f in files:
-            tree.append(f"{subindent}📄 {f}")
-    st.markdown("<br>".join(tree), unsafe_allow_html=True)
-
-show_project_tree()   # 👈 Gọi hàm để hiển thị
+# from db.auth_db import authenticate_user
 
 # ======================
 # Hàm header có màu
@@ -51,7 +34,7 @@ from module.hdv import run_hdv
 from module.ngoai_te_vang import run_ngoai_te_vang
 from module.DVKH import run_dvkh_5_tieuchi
 from module.tieuchithe import run_module_the
-# from module.module_pos import run_module_pos
+from module.module_pos import run_module_pos
 
 st.set_page_config(
     page_title="Chương trình chạy tiêu chí chọn mẫu",

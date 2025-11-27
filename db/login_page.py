@@ -17,6 +17,11 @@ def show_login_page():
 
         if user:
             st.success("Đăng nhập thành công!")
+              # ==== GHI LOG LOGIN ====
+            ip = st.session_state.get("client_ip", "Unknown")
+            user_agent = st.session_state.get("user_agent", "Unknown")
+            log_login(user["username"], ip, user_agent)
+
             login_user(user)
             st.rerun()
 

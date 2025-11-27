@@ -42,6 +42,19 @@ def authenticate_user(username, password):
         return user
     return None
 
+
+#
+def update_password(username, new_password):
+    conn = sqlite3.connect(DB_PATH)
+    c = conn.cursor()
+    new_hash = hash_password(new_password)
+    c.execute(
+        "UPDATE users SET password_hash = ? WHERE username = ?",
+        (new_hash, username)
+    )
+    conn.commit()
+    conn.close()
+    return True
 # def verify_password(username, password):
 #     conn = sqlite3.connect(DB_PATH)
 #     c = conn.cursor()

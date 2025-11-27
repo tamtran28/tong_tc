@@ -1,5 +1,5 @@
 import streamlit as st
-from db.auth_db import create_user, reset_password, get_all_users
+from db.auth_db import create_user
 from db.audit_log import log_action
 
 

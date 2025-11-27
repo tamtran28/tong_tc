@@ -1,5 +1,5 @@
 streamlit
-passlib[bcrypt]
+pyjwt
 pandas
 numpy
 openpyxl

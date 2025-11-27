@@ -1,5 +1,6 @@
 import streamlit as st
 from auth_jwt import decode_access_token
+from db.auth_db import *
 
 
 def logout():

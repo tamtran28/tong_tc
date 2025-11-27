@@ -56,13 +56,13 @@ def verify_password(username, password):
     return verify_hash(password, row[0])
 
 
-def update_password(username, new_hash):
-    conn = sqlite3.connect(DB_PATH)
-    c = conn.cursor()
+# def update_password(username, new_hash):
+#     conn = sqlite3.connect(DB_PATH)
+#     c = conn.cursor()
 
-    c.execute(
-        "UPDATE users SET password_hash = ? WHERE username = ?",
-        (new_hash, username),
-    )
-    conn.commit()
-    conn.close()
+#     c.execute(
+#         "UPDATE users SET password_hash = ? WHERE username = ?",
+#         (new_hash, username),
+#     )
+#     conn.commit()
+#     conn.close()

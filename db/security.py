@@ -38,7 +38,14 @@ def verify_password(password: str, hashed: str) -> bool:
         return hmac.compare_digest(stored_hash, new_hash)
     except Exception:
         return False
+        
+def require_role(roles: list):
+    """Chặn truy cập nếu user không có role hợp lệ"""
+    user_role = st.session_state.get("role")
 
+    if user_role not in roles:
+        st.error("⛔ Bạn không có quyền truy cập chức năng này!")
+        st.stop()
 
 def get_token_expire_delta() -> timedelta:
     return timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)

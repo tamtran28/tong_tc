@@ -1,6 +1,7 @@
 import streamlit as st
 from db.login_page import show_login_page
 from db.auth_jwt import verify_access_token
+from db.auth_db import get_user_by_username
 
 # ======================
 # SETUP APP

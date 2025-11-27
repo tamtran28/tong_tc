@@ -7,7 +7,7 @@ from db.security import require_role
 # from module.module_pos import run_module_pos
 ...
 from db.seed_users import seed_users
-
+seed_users()
 # ===== IMPORT MODULE NGHIỆP VỤ =====
 from module.phoi_the import run_phoi_the
 from module.chuyen_tien import run_chuyen_tien

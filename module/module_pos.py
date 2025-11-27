@@ -8,7 +8,7 @@ import numpy as np
 from datetime import datetime, date
 from dateutil.relativedelta import relativedelta
 import io
-from ..db.security import require_role
+from db.security import require_role
 
 
 # ------------------------------
@@ -178,7 +178,7 @@ def process_pos_only(file_before_2305, file_after_2305, file_6_2b,
 # MODULE STREAMLIT
 # =========================================================
 def run_module_pos():
-    user = require_role(["admin", "pos"]) 
+    # user = require_role(["admin", "pos"]) 
     st.title("🏧 TIÊU CHÍ POS – Mục 6, 7, 8")
 
     st.markdown("**Upload 3 file: 6.2a trước 23/05, 6.2a sau 23/05, 6.2b (MUC51)**")

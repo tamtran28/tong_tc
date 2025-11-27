@@ -1,4 +1,5 @@
 from auth_db import init_db, create_user
+from db.auth_db import init_db, add_user
 
 init_db()
 

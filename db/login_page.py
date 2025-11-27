@@ -22,4 +22,5 @@ def logout_button():
     if st.button("Đăng xuất"):
         from db.auth_jwt import logout
         logout()
-        st.experimental_rerun()
+        st.rerun()
+

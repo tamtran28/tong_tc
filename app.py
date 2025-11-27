@@ -1,203 +1,203 @@
-import streamlit as st
+# import streamlit as st
 
-# ==== LOGIN SYSTEM ====
-from db.login_page import show_login_page, logout_button
-from db.auth_jwt import is_authenticated, get_current_user
-from db.security import require_role
+# # ==== LOGIN SYSTEM ====
+# from db.login_page import show_login_page, logout_button
+# from db.auth_jwt import is_authenticated, get_current_user
+# from db.security import require_role
 
-from db.seed_users import seed_users
-from db.change_pw import change_password_popup
+# from db.seed_users import seed_users
+# from db.change_pw import change_password_popup
 
-# ==== LOGGING SYSTEM ====
-from db.user_logs import init_user_logs_table, log_user_action
-
-
-# ==== KHỞI TẠO DB ====
-seed_users()
-init_user_logs_table()
-
-# ==== MODULE NGHIỆP VỤ ====
-from module.phoi_the import run_phoi_the
-from module.chuyen_tien import run_chuyen_tien
-from module.to_khai_hq import run_to_khai_hq
-from module.tindung import run_tin_dung
-from module.hdv import run_hdv
-from module.ngoai_te_vang import run_ngoai_te_vang
-from module.DVKH import run_dvkh_5_tieuchi
-from module.tieuchithe import run_module_the
-from module.module_pos import run_module_pos
+# # ==== LOGGING SYSTEM ====
+# from db.user_logs import init_user_logs_table, log_user_action
 
 
-# ==== HEADER UI ====
-def colored_header(title, subtitle="", color="#4A90E2"):
-    st.markdown(
-        f"""
-        <div style="border-left: 8px solid {color};
-                    padding: 8px 12px;
-                    margin-top: 10px;
-                    margin-bottom: 12px;
-                    background-color: #F5F9FF;">
-            <h2>{title}</h2>
-            <p style="opacity:0.7;">{subtitle}</p>
-        </div>
-        """,
-        unsafe_allow_html=True,
-    )
+# # ==== KHỞI TẠO DB ====
+# seed_users()
+# init_user_logs_table()
+
+# # ==== MODULE NGHIỆP VỤ ====
+# from module.phoi_the import run_phoi_the
+# from module.chuyen_tien import run_chuyen_tien
+# from module.to_khai_hq import run_to_khai_hq
+# from module.tindung import run_tin_dung
+# from module.hdv import run_hdv
+# from module.ngoai_te_vang import run_ngoai_te_vang
+# from module.DVKH import run_dvkh_5_tieuchi
+# from module.tieuchithe import run_module_the
+# from module.module_pos import run_module_pos
 
 
-# ============================================================
-# 🔐 KIỂM TRA LOGIN
-# ============================================================
-if not is_authenticated():
-    show_login_page()
-    st.stop()
-
-user = get_current_user()
-
-
-# ============================================================
-# SIDEBAR — LUÔN CÓ
-# ============================================================
-with st.sidebar:
-    st.markdown(f"👤 **{user['full_name']}**  \n🔑 Quyền: **{user['role']}**")
-
-    # Xem lịch sử hoạt động của chính mình
-    if st.button("📜 Nhật ký hoạt động của tôi"):
-        st.session_state["view_user_log"] = True
-
-    # Đổi mật khẩu
-    if st.button("🔐 Đổi mật khẩu"):
-        st.session_state["change_pw"] = True
-
-    logout_button()
-
-    # --------------------------------------------------------
-    # ADMIN TOOLS
-    # --------------------------------------------------------
-    if user["role"] == "admin":
-        st.markdown("### 🔧 Admin Tools")
-
-        admin_menu = st.selectbox(
-            "Chọn chức năng quản trị",
-            [
-                "— Chọn chức năng —",
-                "👤 Thêm user mới",
-                "🔄 Reset mật khẩu user",
-                "📜 Xem toàn bộ Audit Trail"
-            ]
-        )
-
-        if admin_menu == "👤 Thêm user mới":
-            from db.admin_user_manage import create_user_form
-            create_user_form()
-            st.stop()
-
-        elif admin_menu == "🔄 Reset mật khẩu user":
-            from db.admin_reset_pw import admin_reset_password
-            admin_reset_password()
-            st.stop()
-
-        elif admin_menu == "📜 Xem toàn bộ Audit Trail":
-            logs = get_all_logs()
-            st.subheader("📜 Audit Trail – Nhật ký hoạt động toàn hệ thống")
-            st.dataframe(
-                [{"User": u, "Action": a, "Detail": d, "Time": t} for u, a, d, t in logs],
-                use_container_width=True
-            )
-            st.stop()
-
-    # --------------------------------------------------------
-    # MENU NGHIỆP VỤ
-    # --------------------------------------------------------
-    menu = st.selectbox(
-        "Chọn phân hệ",
-        [
-            "📘 Phôi Thẻ – GTCG",
-            "💸 Mục 09 – Chuyển tiền",
-            "📑 Tờ khai Hải quan",
-            "🏦 Tiêu chí tín dụng CRM4–32",
-            "💼 HDV (TC1 – TC3)",
-            "🌏 Ngoại tệ & Vàng (TC5 – TC6)",
-            "👥 DVKH (5 tiêu chí)",
-            "💳 Tiêu chí thẻ",
-            "💳 Tiêu chí máy pos",
-        ]
-    )
-
-# GHI LOG MENU
-log_user_action(user["username"], "CHỌN MENU", menu)
+# # ==== HEADER UI ====
+# def colored_header(title, subtitle="", color="#4A90E2"):
+#     st.markdown(
+#         f"""
+#         <div style="border-left: 8px solid {color};
+#                     padding: 8px 12px;
+#                     margin-top: 10px;
+#                     margin-bottom: 12px;
+#                     background-color: #F5F9FF;">
+#             <h2>{title}</h2>
+#             <p style="opacity:0.7;">{subtitle}</p>
+#         </div>
+#         """,
+#         unsafe_allow_html=True,
+#     )
 
 
-# ============================================================
-# POPUP ĐỔI MẬT KHẨU
-# ============================================================
-if st.session_state.get("change_pw"):
-    change_password_popup()
-    st.stop()
+# # ============================================================
+# # 🔐 KIỂM TRA LOGIN
+# # ============================================================
+# if not is_authenticated():
+#     show_login_page()
+#     st.stop()
+
+# user = get_current_user()
 
 
-# ============================================================
-# USER XEM LOG CỦA MÌNH
-# ============================================================
-if st.session_state.get("view_user_log"):
-    st.subheader("📜 Lịch sử hoạt động của bạn")
+# # ============================================================
+# # SIDEBAR — LUÔN CÓ
+# # ============================================================
+# with st.sidebar:
+#     st.markdown(f"👤 **{user['full_name']}**  \n🔑 Quyền: **{user['role']}**")
 
-    logs = get_user_logs(user["username"])
-    if logs:
-        st.table([
-            {"Hành động": a, "Chi tiết": d, "Thời gian": t}
-            for a, d, t in logs
-        ])
-    else:
-        st.info("Chưa có dữ liệu log.")
+#     # Xem lịch sử hoạt động của chính mình
+#     if st.button("📜 Nhật ký hoạt động của tôi"):
+#         st.session_state["view_user_log"] = True
 
-    st.stop()
+#     # Đổi mật khẩu
+#     if st.button("🔐 Đổi mật khẩu"):
+#         st.session_state["change_pw"] = True
+
+#     logout_button()
+
+#     # --------------------------------------------------------
+#     # ADMIN TOOLS
+#     # --------------------------------------------------------
+#     if user["role"] == "admin":
+#         st.markdown("### 🔧 Admin Tools")
+
+#         admin_menu = st.selectbox(
+#             "Chọn chức năng quản trị",
+#             [
+#                 "— Chọn chức năng —",
+#                 "👤 Thêm user mới",
+#                 "🔄 Reset mật khẩu user",
+#                 "📜 Xem toàn bộ Audit Trail"
+#             ]
+#         )
+
+#         if admin_menu == "👤 Thêm user mới":
+#             from db.admin_user_manage import create_user_form
+#             create_user_form()
+#             st.stop()
+
+#         elif admin_menu == "🔄 Reset mật khẩu user":
+#             from db.admin_reset_pw import admin_reset_password
+#             admin_reset_password()
+#             st.stop()
+
+#         elif admin_menu == "📜 Xem toàn bộ Audit Trail":
+#             logs = get_all_logs()
+#             st.subheader("📜 Audit Trail – Nhật ký hoạt động toàn hệ thống")
+#             st.dataframe(
+#                 [{"User": u, "Action": a, "Detail": d, "Time": t} for u, a, d, t in logs],
+#                 use_container_width=True
+#             )
+#             st.stop()
+
+#     # --------------------------------------------------------
+#     # MENU NGHIỆP VỤ
+#     # --------------------------------------------------------
+#     menu = st.selectbox(
+#         "Chọn phân hệ",
+#         [
+#             "📘 Phôi Thẻ – GTCG",
+#             "💸 Mục 09 – Chuyển tiền",
+#             "📑 Tờ khai Hải quan",
+#             "🏦 Tiêu chí tín dụng CRM4–32",
+#             "💼 HDV (TC1 – TC3)",
+#             "🌏 Ngoại tệ & Vàng (TC5 – TC6)",
+#             "👥 DVKH (5 tiêu chí)",
+#             "💳 Tiêu chí thẻ",
+#             "💳 Tiêu chí máy pos",
+#         ]
+#     )
+
+# # GHI LOG MENU
+# log_user_action(user["username"], "CHỌN MENU", menu)
 
 
-# ============================================================
-# MAIN CONTENT
-# ============================================================
-st.title("📊 CHƯƠNG TRÌNH CHẠY TIÊU CHÍ CHỌN MẪU – KTNB")
+# # ============================================================
+# # POPUP ĐỔI MẬT KHẨU
+# # ============================================================
+# if st.session_state.get("change_pw"):
+#     change_password_popup()
+#     st.stop()
 
 
-if menu == "📘 Phôi Thẻ – GTCG":
-    colored_header("📘 PHÔI THẺ – GTCG")
-    run_phoi_the()
+# # ============================================================
+# # USER XEM LOG CỦA MÌNH
+# # ============================================================
+# if st.session_state.get("view_user_log"):
+#     st.subheader("📜 Lịch sử hoạt động của bạn")
 
-elif menu == "💸 Mục 09 – Chuyển tiền":
-    colored_header("💸 CHUYỂN TIỀN")
-    run_chuyen_tien()
+#     logs = get_user_logs(user["username"])
+#     if logs:
+#         st.table([
+#             {"Hành động": a, "Chi tiết": d, "Thời gian": t}
+#             for a, d, t in logs
+#         ])
+#     else:
+#         st.info("Chưa có dữ liệu log.")
 
-elif menu == "📑 Tờ khai Hải quan":
-    colored_header("📑 TỜ KHAI HẢI QUAN")
-    run_to_khai_hq()
+#     st.stop()
 
-elif menu == "🏦 Tiêu chí tín dụng CRM4–32":
-    colored_header("🏦 TÍN DỤNG CRM4 – CRM32")
-    run_tin_dung()
 
-elif menu == "💼 HDV (TC1 – TC3)":
-    colored_header("💼 HDV – TC1 đến TC3")
-    run_hdv()
+# # ============================================================
+# # MAIN CONTENT
+# # ============================================================
+# st.title("📊 CHƯƠNG TRÌNH CHẠY TIÊU CHÍ CHỌN MẪU – KTNB")
 
-elif menu == "🌏 Ngoại tệ & Vàng (TC5 – TC6)":
-    colored_header("🌏 NGOẠI TỆ & VÀNG")
-    run_ngoai_te_vang()
 
-elif menu == "👥 DVKH (5 tiêu chí)":
-    colored_header("👥 DVKH – 5 TIÊU CHÍ")
-    run_dvkh_5_tieuchi()
+# if menu == "📘 Phôi Thẻ – GTCG":
+#     colored_header("📘 PHÔI THẺ – GTCG")
+#     run_phoi_the()
 
-elif menu == "💳 Tiêu chí thẻ":
-    colored_header("💳 TIÊU CHÍ THẺ")
-    run_module_the()
+# elif menu == "💸 Mục 09 – Chuyển tiền":
+#     colored_header("💸 CHUYỂN TIỀN")
+#     run_chuyen_tien()
 
-elif menu == "💳 Tiêu chí máy pos":
-    if not require_role(user, ["admin", "pos"]):
-        st.error("🚫 Bạn không có quyền truy cập mục POS")
-        st.stop()
-    colored_header("💳 TIÊU CHÍ MÁY POS")
-    run_module_pos()
+# elif menu == "📑 Tờ khai Hải quan":
+#     colored_header("📑 TỜ KHAI HẢI QUAN")
+#     run_to_khai_hq()
+
+# elif menu == "🏦 Tiêu chí tín dụng CRM4–32":
+#     colored_header("🏦 TÍN DỤNG CRM4 – CRM32")
+#     run_tin_dung()
+
+# elif menu == "💼 HDV (TC1 – TC3)":
+#     colored_header("💼 HDV – TC1 đến TC3")
+#     run_hdv()
+
+# elif menu == "🌏 Ngoại tệ & Vàng (TC5 – TC6)":
+#     colored_header("🌏 NGOẠI TỆ & VÀNG")
+#     run_ngoai_te_vang()
+
+# elif menu == "👥 DVKH (5 tiêu chí)":
+#     colored_header("👥 DVKH – 5 TIÊU CHÍ")
+#     run_dvkh_5_tieuchi()
+
+# elif menu == "💳 Tiêu chí thẻ":
+#     colored_header("💳 TIÊU CHÍ THẺ")
+#     run_module_the()
+
+# elif menu == "💳 Tiêu chí máy pos":
+#     if not require_role(user, ["admin", "pos"]):
+#         st.error("🚫 Bạn không có quyền truy cập mục POS")
+#         st.stop()
+#     colored_header("💳 TIÊU CHÍ MÁY POS")
+#     run_module_pos()
 
 
 # import streamlit as st

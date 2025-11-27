@@ -98,7 +98,7 @@ elif menu == "💳 Tiêu chí thẻ":
 #     colored_header("💳 TIÊU CHÍ MÁY POS", "Các tiêu chí kiểm toán máy pos", "#009688")
 #     run_module_pos()
 
-if menu == "Tiêu chí máy pos":
+if menu == "💳 Tiêu chí máy pos":
     if not require_role(user, ["pos", "admin"]):
         st.error("🚫 Bạn không có quyền truy cập mục này.")
         st.stop()

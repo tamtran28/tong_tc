@@ -21,6 +21,13 @@ def require_role(user, allowed_roles):
         return False
 
     return user.get("role") in allowed_roles
+import bcrypt
+
+def verify_hash(password: str, hashed: str) -> bool:
+    try:
+        return bcrypt.checkpw(password.encode(), hashed.encode())
+    except:
+        return False
 
 # # db/security.py
 # import hashlib

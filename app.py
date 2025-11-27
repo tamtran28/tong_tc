@@ -11,6 +11,7 @@ from db.change_pw import change_password_popup
 # ==== LOGGING SYSTEM ====
 from db.user_logs import init_user_logs_table, log_user_action
 
+
 # ==== KHỞI TẠO DB ====
 seed_users()
 init_user_logs_table()

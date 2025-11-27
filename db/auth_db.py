@@ -42,18 +42,18 @@ def authenticate_user(username, password):
         return user
     return None
 
-def verify_password(username, password):
-    conn = sqlite3.connect(DB_PATH)
-    c = conn.cursor()
+# def verify_password(username, password):
+#     conn = sqlite3.connect(DB_PATH)
+#     c = conn.cursor()
 
-    c.execute("SELECT password_hash FROM users WHERE username = ?", (username,))
-    row = c.fetchone()
-    conn.close()
+#     c.execute("SELECT password_hash FROM users WHERE username = ?", (username,))
+#     row = c.fetchone()
+#     conn.close()
 
-    if not row:
-        return False
+#     if not row:
+#         return False
 
-    return verify_hash(password, row[0])
+#     return verify_hash(password, row[0])
 
 
 # def update_password(username, new_hash):

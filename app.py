@@ -11,7 +11,7 @@ from db.change_pw import change_password_popup
 from db.admin_user_manage import create_user_form
 from db.admin_view_audit import view_audit_logs
 
-# seed_users()  # tạo user mặc định nếu chưa có
+seed_users()  # tạo user mặc định nếu chưa có
 
 
 # ==== IMPORT MODULE NGHIỆP VỤ ====

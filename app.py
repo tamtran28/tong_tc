@@ -7,6 +7,7 @@ from db.security import require_role
 from module.module_pos import run_module_pos
 ...
 from db.seed_users import seed_users
+seed_users()
 
 # ========== LOGIN ==========
 if not is_authenticated():

@@ -123,8 +123,10 @@ elif menu == "💳 Tiêu chí thẻ":
     run_module_the()
 
 elif menu == "💳 Tiêu chí máy pos":
+    require_role("pos")  # bắt buộc user phải có role POS
     colored_header("💳 TIÊU CHÍ MÁY POS", "Các tiêu chí kiểm toán máy pos", "#009688")
     run_module_pos()
+
 
 
 # import streamlit as st

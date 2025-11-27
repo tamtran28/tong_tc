@@ -61,6 +61,24 @@ with st.sidebar:
     # nút đăng xuất
     logout_button()
 
+    if user["role"] == "admin":
+    st.markdown("### 🔧 Admin Tools")
+    admin_menu = st.radio("Chọn chức năng quản trị", [
+        "Không chọn",
+        "Reset mật khẩu user khác",
+        "Tạo user mới",
+    ])
+
+    if admin_menu == "Reset mật khẩu user khác":
+        from db.admin_pw_reset import admin_reset_password_page
+        admin_reset_password_page()
+        st.stop()
+
+    if admin_menu == "Tạo user mới":
+        from db.admin_create_user import admin_create_user_page
+        admin_create_user_page()
+        st.stop()
+
     # menu phân hệ
     menu = st.selectbox(
         "Chọn phân hệ",

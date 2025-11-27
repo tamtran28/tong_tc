@@ -14,7 +14,8 @@ def show_login_page():
         if user:
             st.success("Đăng nhập thành công!")
             login_user(user)
-            st.experimental_rerun()
+            st.rerun()
+
         else:
             st.error("Sai tên đăng nhập hoặc mật khẩu!")
 

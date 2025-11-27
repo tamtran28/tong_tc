@@ -9,7 +9,7 @@ from db.seed_users import seed_users
 from db.change_pw import change_password_popup
 
 # ==== LOGGING SYSTEM ====
-from db.user_logs import init_user_logs_table, log_user_action, get_user_logs, get_all_logs
+from db.user_logs import init_user_logs_table, log_user_action
 
 # ==== KHỞI TẠO DB ====
 seed_users()

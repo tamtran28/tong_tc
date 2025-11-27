@@ -1,10 +1,11 @@
+# db/auth_db.py
 import sqlite3
-from passlib.context import CryptContext
 from pathlib import Path
+from datetime import datetime
 
-DB_PATH = Path("users.db")  # file SQLite sẽ nằm cùng thư mục
+from db.security import hash_password, verify_password  # dùng lại hàm hash
 
-pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+DB_PATH = Path(__file__).with_name("users.db")
 
 
 def get_connection():
@@ -14,42 +15,69 @@ def get_connection():
 
 
 def init_db():
-    """Tạo bảng users nếu chưa có."""
+    """
+    Tạo bảng users nếu chưa có.
+    Đồng thời tạo user admin mặc định nếu chưa tồn tại.
+    """
     conn = get_connection()
     cur = conn.cursor()
+
     cur.execute(
         """
         CREATE TABLE IF NOT EXISTS users (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             username TEXT UNIQUE NOT NULL,
-            password_hash TEXT NOT NULL,
             full_name TEXT,
-            role TEXT NOT NULL
+            role TEXT NOT NULL,
+            password_hash TEXT NOT NULL,
+            is_active INTEGER NOT NULL DEFAULT 1,
+            created_at TEXT NOT NULL
         )
         """
     )
     conn.commit()
+
+    # tạo admin mặc định: admin / admin123 nếu chưa có
+    cur.execute("SELECT * FROM users WHERE username = ?", ("admin",))
+    row = cur.fetchone()
+    if row is None:
+        password_hash = hash_password("admin123")
+        cur.execute(
+            """
+            INSERT INTO users(username, full_name, role, password_hash, is_active, created_at)
+            VALUES (?, ?, ?, ?, ?, ?)
+            """,
+            (
+                "admin",
+                "Quản trị hệ thống",
+                "admin",
+                password_hash,
+                1,
+                datetime.utcnow().isoformat(timespec="seconds"),
+            ),
+        )
+        conn.commit()
+
     conn.close()
 
 
-def hash_password(password: str) -> str:
-    return pwd_context.hash(password)
-
-
-def verify_password(password: str, password_hash: str) -> bool:
-    return pwd_context.verify(password, password_hash)
-
-
-def create_user(username: str, password: str, full_name: str, role: str):
-    """Tạo user mới (dùng trong script seed)."""
+def create_user(username: str, password: str, full_name: str = "", role: str = "user"):
     conn = get_connection()
     cur = conn.cursor()
+    password_hash = hash_password(password)
     cur.execute(
         """
-        INSERT INTO users (username, password_hash, full_name, role)
-        VALUES (?, ?, ?, ?)
+        INSERT INTO users(username, full_name, role, password_hash, is_active, created_at)
+        VALUES (?, ?, ?, ?, ?, ?)
         """,
-        (username, hash_password(password), full_name, role),
+        (
+            username,
+            full_name,
+            role,
+            password_hash,
+            1,
+            datetime.utcnow().isoformat(timespec="seconds"),
+        ),
     )
     conn.commit()
     conn.close()
@@ -62,3 +90,24 @@ def get_user_by_username(username: str):
     row = cur.fetchone()
     conn.close()
     return row
+
+
+def authenticate_user(username: str, password: str):
+    """
+    Trả về dict user nếu đăng nhập đúng, ngược lại trả về None
+    """
+    row = get_user_by_username(username)
+    if row is None:
+        return None
+    if not row["is_active"]:
+        return None
+    if not verify_password(password, row["password_hash"]):
+        return None
+
+    # chuyển về dict
+    return {
+        "id": row["id"],
+        "username": row["username"],
+        "full_name": row["full_name"],
+        "role": row["role"],
+    }

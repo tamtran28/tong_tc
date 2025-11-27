@@ -2,6 +2,7 @@ import jwt
 from datetime import datetime, timedelta
 from dotenv import load_dotenv
 import os
+from db.auth_db import get_user_by_username
 
 load_dotenv()  # đọc file .env
 

@@ -2,34 +2,35 @@
 import streamlit as st
 
 from db.auth_db import init_db, authenticate_user
-from db.auth_jwt import create_access_token, verify_access_token
+from db.auth_jwt import create_access_token, decode_access_token
+
+SESSION_TOKEN_KEY = "access_token"
+SESSION_USER_KEY = "current_user"
 
 
-# Khởi tạo DB ngay khi import module
-init_db()
-
-
-SESSION_TOKEN_KEY = "auth_token"
-SESSION_USER_KEY = "auth_user"
-
-
+# ==========================
+# TRẠNG THÁI LOGIN
+# ==========================
 def is_authenticated() -> bool:
     """
-    Kiểm tra trong session có token hợp lệ hay không.
+    Trả về True nếu trong session có token hợp lệ.
     """
     token = st.session_state.get(SESSION_TOKEN_KEY)
     if not token:
         return False
 
-    payload = verify_access_token(token)
-    if payload is None:
-        # token hết hạn hoặc lỗi -> xoá khỏi session
+    payload = decode_access_token(token)
+    if not payload:
+        # token hết hạn / sai -> xóa
         st.session_state.pop(SESSION_TOKEN_KEY, None)
         st.session_state.pop(SESSION_USER_KEY, None)
         return False
 
-    # cập nhật lại user (phòng trường hợp sửa role sau này)
-    st.session_state[SESSION_USER_KEY] = payload
+    if SESSION_USER_KEY not in st.session_state:
+        st.session_state[SESSION_USER_KEY] = {
+            "username": payload.get("sub"),
+            "role": payload.get("role"),
+        }
     return True
 
 
@@ -37,65 +38,42 @@ def get_current_user():
     return st.session_state.get(SESSION_USER_KEY)
 
 
-def logout_button():
-    """
-    Hiển thị nút logout ở sidebar / đầu trang
-    """
-    if st.button("🚪 Đăng xuất"):
-        st.session_state.pop(SESSION_TOKEN_KEY, None)
-        st.session_state.pop(SESSION_USER_KEY, None)
-        st.experimental_rerun()
+def logout():
+    for key in [SESSION_TOKEN_KEY, SESSION_USER_KEY, "role"]:
+        st.session_state.pop(key, None)
 
 
+# ==========================
+# UI ĐĂNG NHẬP
+# ==========================
 def show_login_page():
     """
-    Vẽ màn hình đăng nhập.
-    Gọi hàm này trong app.py nếu chưa đăng nhập.
+    Hiển thị form đăng nhập.
     """
-    st.markdown("## 🔐 Đăng nhập hệ thống KTNB")
+    init_db()  # đảm bảo bảng + user mặc định tồn tại
 
-    col1, col2 = st.columns([2, 1])
+    st.title("🔐 ĐĂNG NHẬP HỆ THỐNG KTNB")
+
+    username = st.text_input("Tên đăng nhập")
+    password = st.text_input("Mật khẩu", type="password")
+
+    col1, col2 = st.columns([1, 3])
     with col1:
-        username = st.text_input("👤 Tên đăng nhập", key="login_username")
-        password = st.text_input("🔑 Mật khẩu", type="password", key="login_password")
-        login_btn = st.button("Đăng nhập", type="primary")
+        login_btn = st.button("Đăng nhập")
 
-        if login_btn:
-            if not username or not password:
-                st.error("Vui lòng nhập đủ username và password.")
-                return
+    if login_btn:
+        user = authenticate_user(username, password)
+        if not user:
+            st.error("❌ Sai tên đăng nhập hoặc mật khẩu.")
+            return
 
-            user = authenticate_user(username.strip(), password)
-            if user is None:
-                st.error("Sai tên đăng nhập hoặc mật khẩu.")
-                return
+        token = create_access_token({"sub": user["username"], "role": user["role"]})
+        st.session_state[SESSION_TOKEN_KEY] = token
+        st.session_state[SESSION_USER_KEY] = {
+            "username": user["username"],
+            "role": user["role"],
+        }
+        st.session_state["role"] = user["role"]  # cho require_role dùng
 
-            # Tạo JWT token
-            token = create_access_token(
-                {
-                    "sub": user["username"],
-                    "full_name": user["full_name"],
-                    "role": user["role"],
-                }
-            )
-
-            st.session_state[SESSION_TOKEN_KEY] = token
-            st.session_state[SESSION_USER_KEY] = {
-                "username": user["username"],
-                "full_name": user["full_name"],
-                "role": user["role"],
-            }
-
-            st.success("Đăng nhập thành công! Đang chuyển vào hệ thống...")
-            st.experimental_rerun()
-
-    with col2:
-        st.info(
-            """
-**Tài khoản mặc định**  
-- User: `admin`  
-- Pass: `admin123`  
-
-Hãy đổi mật khẩu / tạo user mới trong DB nếu cần.
-"""
-        )
+        st.success("✅ Đăng nhập thành công!")
+        st.experimental_rerun()

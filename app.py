@@ -8,7 +8,10 @@ from db.security import require_role
 from db.seed_users import seed_users
 from db.change_pw import change_password_popup
 
-seed_users()  # tạo user mặc định nếu chưa có
+from db.admin_user_manage import create_user_form, reset_password_form
+from db.admin_view_audit import view_audit_logs
+
+# seed_users()  # tạo user mặc định nếu chưa có
 
 
 # ==== IMPORT MODULE NGHIỆP VỤ ====

@@ -8,7 +8,8 @@ import numpy as np
 from datetime import datetime, date
 from dateutil.relativedelta import relativedelta
 import io
-from db.security import require_role
+from ..db.security import require_role
+
 
 # ------------------------------
 # Xuất file excel

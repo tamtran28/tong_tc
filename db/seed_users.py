@@ -1,12 +1,13 @@
-from auth_db import init_db, create_user
-from db.auth_db import init_db, add_user
+# db/seed_users.py
+from db.auth_db import create_user, init_db
 
-init_db()
-
-# Tạo 1 số user mẫu
-create_user("admin", "123456", "Quản trị hệ thống", "admin")
-create_user("kt_hn", "hn2025", "Kiểm toán Hà Nội", "audit")
-create_user("pos01", "pos2025", "User POS", "pos")
-create_user("the01", "the2025", "User Thẻ", "the")
-
-print("Đã tạo xong users.")
+if __name__ == "__main__":
+    init_db()
+    # Ví dụ tạo thêm 1 user
+    create_user(
+        username="ktnb01",
+        password="password123",
+        full_name="Kiểm toán viên 01",
+        role="auditor",
+    )
+    print("Đã tạo user ktnb01 / password123")

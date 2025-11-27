@@ -1,0 +1,37 @@
+import streamlit as st
+from auth_jwt import decode_access_token
+
+
+def logout():
+    for key in list(st.session_state.keys()):
+        del st.session_state[key]
+
+
+def get_current_user():
+    token = st.session_state.get("access_token")
+    if not token:
+        return None
+
+    payload = decode_access_token(token)
+    if not payload:
+        # Token hết hạn / lỗi → logout
+        logout()
+        return None
+
+    return payload  # {'sub': username, 'role': role, 'full_name': ...}
+
+
+def require_login():
+    user = get_current_user()
+    if not user:
+        st.warning("⚠️ Phiên đăng nhập hết hạn hoặc chưa đăng nhập.")
+        st.stop()
+    return user
+
+
+def require_role(roles: list[str]):
+    user = require_login()
+    if user.get("role") not in roles:
+        st.error("🚫 Bạn không có quyền truy cập chức năng này.")
+        st.stop()
+    return user

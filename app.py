@@ -1,3 +1,8 @@
+import sys, os
+sys.path.append(os.path.dirname(__file__))
+sys.path.append(os.path.join(os.path.dirname(__file__), "db"))
+sys.path.append(os.path.join(os.path.dirname(__file__), "module"))
+
 import streamlit as st
 from db.login_page import show_login_page
 from db.auth_db import authenticate_user

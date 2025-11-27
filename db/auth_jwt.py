@@ -1,27 +1,14 @@
-# db/auth_jwt.py
-import os
-from datetime import datetime, timedelta, timezone
-from typing import Optional, Dict
+import streamlit as st
 
-import jwt  # PyJWT
+def login_user(user_dict):
+    st.session_state["user"] = user_dict
 
-JWT_SECRET_KEY = os.getenv("JWT_SECRET_KEY", "my_jwt_secret")
-JWT_ALGORITHM = "HS256"
+def logout():
+    if "user" in st.session_state:
+        del st.session_state["user"]
 
+def is_authenticated():
+    return "user" in st.session_state
 
-def create_access_token(data: Dict, expires_delta: Optional[timedelta] = None) -> str:
-    to_encode = data.copy()
-    if expires_delta is None:
-        expires_delta = timedelta(hours=8)
-    expire = datetime.now(timezone.utc) + expires_delta
-    to_encode.update({"exp": expire})
-    token = jwt.encode(to_encode, JWT_SECRET_KEY, algorithm=JWT_ALGORITHM)
-    return token
-
-
-def decode_access_token(token: str) -> Optional[Dict]:
-    try:
-        payload = jwt.decode(token, JWT_SECRET_KEY, algorithms=[JWT_ALGORITHM])
-        return payload
-    except jwt.PyJWTError:
-        return None
+def get_current_user():
+    return st.session_state.get("user", None)

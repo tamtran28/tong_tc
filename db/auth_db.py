@@ -42,6 +42,26 @@ def authenticate_user(username, password):
         return user
     return None
 
+#them
+def create_user(username, full_name, role, password):
+    conn = sqlite3.connect(DB_PATH)
+    c = conn.cursor()
+
+    # check trùng username
+    c.execute("SELECT 1 FROM users WHERE username=?", (username,))
+    if c.fetchone():
+        conn.close()
+        return False, "Username đã tồn tại!"
+
+    hashed = hash_password(password)
+
+    c.execute(
+        "INSERT INTO users(username, full_name, role, password_hash) VALUES (?, ?, ?, ?)",
+        (username, full_name, role, hashed)
+    )
+    conn.commit()
+    conn.close()
+    return True, "Tạo user thành công!"
 
 #
 def update_password(username, new_password):

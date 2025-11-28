@@ -74,7 +74,8 @@ with st.sidebar:
                 "— Chọn chức năng —",
                 "👤 Thêm user mới",
                 "🔄 Reset mật khẩu user",
-                "📜 Xem Audit Trail"
+                "📜 Xem Audit Trail",
+                "📜 Xem hoạt động user"
             ]
         )
 

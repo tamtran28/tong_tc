@@ -136,7 +136,6 @@ if menu == "📘 Phôi Thẻ – GTCG":
 
 elif menu == "💸 Mục 09 – Chuyển tiền":
     colored_header("💸 CHUYỂN TIỀN")
-    log_user_action(user["username"], "CHUYỂN TIỀN")
     run_chuyen_tien()
 
 elif menu == "📑 Tờ khai Hải quan":

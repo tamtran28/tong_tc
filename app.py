@@ -94,7 +94,7 @@ with st.sidebar:
             st.stop()
 
         elif admin_menu == "📜 Xem hoạt động user":
-            from db.user_activity_view import view_my_activity
+            from log.user_activity_view import view_my_activity
             if st.session_state.get("view_my_log"):
                 view_my_activity(user["username"])
                 st.stop()

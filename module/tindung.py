@@ -614,7 +614,7 @@ def run_tin_dung():
     with colB:
         dia_ban_kt_input = st.text_input(
             "Nhập tên tỉnh/thành của đơn vị (phân cách bằng dấu phẩy)",
-            placeholder="VD: Hồ Chí Minh, Long An",
+            placeholder="VD: thanh pho ho chi minh, tinh binh duong",
         )
         dia_ban_kt = [t.strip().lower() for t in dia_ban_kt_input.split(",") if t.strip()]
     

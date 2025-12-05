@@ -163,7 +163,7 @@ elif menu == "💳 Tiêu chí thẻ":
     run_module_the()
 
 elif menu == "💳 Tiêu chí máy pos":
-    if not require_role(user, ["admin", "pos"]):
+    if not require_role(user, ["admin", "pos","user"]):
         st.error("🚫 Bạn không có quyền truy cập mục POS")
         st.stop()
     colored_header("💳 TIÊU CHÍ MÁY POS")

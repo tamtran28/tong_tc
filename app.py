@@ -9,7 +9,6 @@ from db.seed_users import seed_users
 from db.change_pw import change_password_popup
 
 seed_users()
-
 # log
 from log.user_activity_view import view_my_activity
 

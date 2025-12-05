@@ -1,10 +1,16 @@
 from db.auth_db import init_db
 from db.security import hash_password
 import sqlite3
-
+from db.auth_db import DB_PATH, init_db, insert_user
 DB_PATH = "db/users.db"
 
 def seed_users():
+    # Nếu DB có rồi thì không tạo lại
+    if os.path.exists(DB_PATH):
+        return
+
+    print("🔧 First run: creating user database...")
+    
     init_db()
 
     users = [

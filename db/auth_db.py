@@ -1,6 +1,6 @@
 import sqlite3
 import os
-from db.security import hash_password
+from db.security import hash_password, verify_password
 
 # 📌 Lưu database vào thư mục persistent của Streamlit Cloud
 DB_PATH = os.path.join(".streamlit", "users.db")
@@ -43,6 +43,19 @@ def get_user_by_username(username):
     return None
 
 
+def authenticate_user(username, password):
+    """Kiểm tra thông tin đăng nhập và trả về user nếu hợp lệ"""
+    user = get_user_by_username(username)
+
+    if not user:
+        return None
+
+    if verify_password(password, user["password_hash"]):
+        return user
+
+    return None
+
+
 def insert_user(username, full_name, role, password):
     conn = sqlite3.connect(DB_PATH)
     c = conn.cursor()
@@ -74,14 +87,17 @@ def create_user(username, full_name, role, password):
     conn.close()
     return True, "Tạo user thành công!"
 def update_password(username, new_password):
+    init_db()
     conn = sqlite3.connect(DB_PATH)
     c = conn.cursor()
     c.execute(
         "UPDATE users SET password_hash = ? WHERE username = ?",
         (hash_password(new_password), username),
     )
+    updated = c.rowcount
     conn.commit()
     conn.close()
+    return updated > 0
 
 # import sqlite3
 # from db.security import hash_password, verify_password

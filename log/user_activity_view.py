@@ -1,5 +1,5 @@
 import streamlit as st
-from db.user_logs import get_all_logs
+from db.user_logs import get_user_logs
 
 
 def view_my_activity(username):
@@ -7,10 +7,7 @@ def view_my_activity(username):
 
     st.subheader("🧾 Lịch sử hoạt động của bạn")
 
-    logs = get_all_logs()
-
-    # Lọc theo user đang login
-    user_logs = [log for log in logs if log[0] == username]
+    user_logs = get_user_logs(username)
 
     if not user_logs:
         st.info("⛔ Bạn chưa có hoạt động nào được ghi lại.")

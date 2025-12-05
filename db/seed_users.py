@@ -1,8 +1,6 @@
-from db.auth_db import init_db
-from db.security import hash_password
 import sqlite3
-
-DB_PATH = "db/users.db"
+from db.auth_db import init_db, DB_PATH
+from db.security import hash_password
 
 def seed_users():
     init_db()
@@ -25,3 +23,4 @@ def seed_users():
             pass
 
     conn.commit()
+    conn.close()

@@ -1,11 +1,13 @@
+import os
 import sqlite3
 from datetime import datetime
-import os
 
-DB_PATH = "db/app.db"
+DB_PATH = os.path.join(".streamlit", "app.db")
 
 # Tạo bảng log nếu chưa tồn tại
 def init_login_log_table():
+    os.makedirs(os.path.dirname(DB_PATH), exist_ok=True)
+
     conn = sqlite3.connect(DB_PATH)
     c = conn.cursor()
     c.execute("""
@@ -22,6 +24,7 @@ def init_login_log_table():
 
 
 def log_login(username, ip="Unknown", user_agent="Unknown"):
+    init_login_log_table()
     conn = sqlite3.connect(DB_PATH)
     c = conn.cursor()
     c.execute("""

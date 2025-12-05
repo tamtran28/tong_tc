@@ -2,6 +2,7 @@ import streamlit as st
 from db.auth_jwt import get_current_user
 from db.security import verify_password
 from db.auth_db import update_password
+from db.user_logs import log_user_action
 
 
 def change_password_popup():
@@ -25,7 +26,11 @@ def change_password_popup():
             st.error("❌ Mật khẩu mới không khớp!")
             return
 
-        update_password(user["username"], new_pw)
+        if not update_password(user["username"], new_pw):
+            st.error("⚠️ Không tìm thấy tài khoản để cập nhật mật khẩu.")
+            return
+
+        log_user_action(user["username"], "Đổi mật khẩu thành công")
         st.success("✅ Đổi mật khẩu thành công! Hãy đăng nhập lại.")
         st.session_state.clear()
         st.rerun()

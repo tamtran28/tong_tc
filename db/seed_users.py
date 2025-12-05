@@ -11,6 +11,7 @@ def seed_users():
         ("admin", "Quản trị hệ thống", "admin", hash_password("123")),
         ("pos01", "Nhân viên POS", "pos", hash_password("123")),
         ("td01", "Nhân viên tín dụng", "credit", hash_password("123")),
+        ("tam.tnt, "User01", "user", hash_password("123")),
         ("viewer", "Khách xem", "view", hash_password("123")),
     ]
 

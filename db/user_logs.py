@@ -47,6 +47,33 @@ def log_user_action(username, action):
     conn.close()
 
 
+def log_password_change(username):
+    """Ghi nhận sự kiện đổi mật khẩu của người dùng."""
+    log_user_action(username, "Đổi mật khẩu thành công")
+
+
+def get_latest_password_change(username):
+    """Trả về lần đổi mật khẩu gần nhất của user (nếu có)."""
+    init_user_logs_table()
+
+    conn = sqlite3.connect(DB_PATH)
+    c = conn.cursor()
+
+    c.execute(
+        """
+            SELECT timestamp
+            FROM user_logs
+            WHERE username = ? AND action = 'Đổi mật khẩu thành công'
+            ORDER BY id DESC
+            LIMIT 1
+        """,
+        (username,),
+    )
+    row = c.fetchone()
+    conn.close()
+    return row[0] if row else None
+
+
 # =========================
 # LẤY LOG ĐỂ ADMIN XEM
 # =========================

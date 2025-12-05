@@ -1,6 +1,7 @@
-import sqlite3
 import os
 from datetime import datetime
+
+from db.sqlite_adapter import sqlite3
 
 DB_PATH = os.path.join(os.path.dirname(__file__), "users.db")
 

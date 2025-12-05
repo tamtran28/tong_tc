@@ -1,14 +1,18 @@
-import sqlite3
 import os
 from datetime import datetime
 
-DB_PATH = os.path.join(os.path.dirname(__file__), "users.db")
+from db.sqlite_adapter import sqlite3
+
+from db.auth_db import DB_PATH
 
 
 # =========================
 # TẠO TABLE LƯU LOG (NẾU CHƯA CÓ)
 # =========================
 def init_user_logs_table():
+    # Đảm bảo thư mục lưu DB tồn tại để Streamlit Cloud không mất dữ liệu
+    os.makedirs(os.path.dirname(DB_PATH), exist_ok=True)
+
     conn = sqlite3.connect(DB_PATH)
     c = conn.cursor()
 
@@ -53,6 +57,23 @@ def get_all_logs():
     c = conn.cursor()
 
     c.execute("SELECT username, action, timestamp FROM user_logs ORDER BY id DESC")
+    rows = c.fetchall()
+
+    conn.close()
+    return rows
+
+
+def get_user_logs(username):
+    """Lấy lịch sử hoạt động của một người dùng cụ thể."""
+    init_user_logs_table()
+
+    conn = sqlite3.connect(DB_PATH)
+    c = conn.cursor()
+
+    c.execute(
+        "SELECT username, action, timestamp FROM user_logs WHERE username = ? ORDER BY id DESC",
+        (username,),
+    )
     rows = c.fetchall()
 
     conn.close()

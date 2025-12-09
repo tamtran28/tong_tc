@@ -10,7 +10,7 @@ from io import BytesIO
 # ===============================
 
 def run_dvkh():
-    st.header("📌 DVKH – Chạy dữ liệu CKH / KKH / Mục 30 / SMS / SCM010")
+    st.header("📌 Tiêu chí DVKH")
 
     st.info("Hãy tải lên các file theo yêu cầu bên dưới. Tất cả phải đúng định dạng!")
 

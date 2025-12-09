@@ -19,7 +19,7 @@ from module.to_khai_hq import run_to_khai_hq
 from module.tindung import run_tin_dung
 from module.hdv import run_hdv
 from module.ngoai_te_vang import run_ngoai_te_vang
-from module.DVKH import run_dvkh_5_tieuchi
+from module.DVKH import run_dvkh
 from module.tieuchithe import run_module_the
 from module.module_pos import run_module_pos
 
@@ -154,7 +154,7 @@ elif menu == "🌏 Ngoại tệ & Vàng (TC5 – TC6)":
 
 elif menu == "👥 DVKH (5 tiêu chí)":
     colored_header("👥 DVKH – 5 TIÊU CHÍ")
-    run_dvkh_5_tieuchi()
+    run_dvkh()
 
 elif menu == "💳 Tiêu chí thẻ":
     colored_header("💳 TIÊU CHÍ THẺ")

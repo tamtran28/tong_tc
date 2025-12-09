@@ -69,9 +69,9 @@ def run_dvkh_5_tieuchi():
     st.markdown("Upload các file đầu vào hoặc để trống và dùng đường dẫn mặc định (tùy môi trường).")
 
     # ---------- DEFAULT PATHS (thay đổi khi cần) ----------
-    DEFAULT_CKH_GLOB = "/content/drive/MyDrive/ChayDl/1500_DL_CKH/CKH/HDV_CHITIET_CKH_*.xls*"
-    DEFAULT_KKH_GLOB = "/content/drive/MyDrive/ChayDl/1500_DL_CKH/KKH/HDV_CHITIET_KKH_*.xls*"
-    DEFAULT_MUC30_PATH = "/content/drive/MyDrive/ChayDl/1500_DL_CKH/muc30/MUC 30 1710 NEW (1).xlsx"
+    DEFAULT_CKH_GLOB = "/content/drive/MyDrive/ChayDl/thang10_2025/HDV/HDV_CHITIET_CKH_*.xls*"
+    DEFAULT_KKH_GLOB = "/content/drive/MyDrive/ChayDl/thang10_2025/HDV/HDV_CHITIET_KKH_*.xls*"
+    DEFAULT_MUC30_PATH = "/content/drive/MyDrive/ChayDl/thang10_2025/muc30/MUC 30 1610.xlsx"
     DEFAULT_MUC14_SMS = "/content/drive/MyDrive/ChayDl/1500_DL_CKH/sms/Muc14_DKSMS.txt"
     DEFAULT_MUC14_SCM010 = "/content/drive/MyDrive/ChayDl/1500_DL_CKH/sms/Muc14_SCM010.xlsx"
     DEFAULT_42A_GLOB = "/content/drive/MyDrive/ChayDl/thang10_2025/HDV/HDV_CHITIET_KKH_*.xls"

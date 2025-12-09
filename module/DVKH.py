@@ -7,7 +7,7 @@ import re
 import io
 from datetime import datetime
 
-st.set_option('deprecation.showfileUploaderEncoding', False)
+
 
 # --- Helper: Excel bytes for download
 def dfs_to_excel_bytes(dfs: dict):

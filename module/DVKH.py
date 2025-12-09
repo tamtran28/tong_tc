@@ -1,192 +1,167 @@
 import streamlit as st
 import pandas as pd
 import numpy as np
+import glob
+import re
 from io import BytesIO
 
-# ======================================================
-#   MODULE DVKH – 5 TIÊU CHÍ
-# ======================================================
+# ===============================
+# MODULE DVKH – CHẠY TƯƠNG TỰ COLAB
+# ===============================
 
-def run_dvkh_5_tieuchi():
+def run_dvkh():
+    st.header("📌 DVKH – Chạy dữ liệu CKH / KKH / Mục 30 / SMS / SCM010")
 
-    st.title("📌 ỨNG DỤNG XỬ LÝ DỮ LIỆU DVKH – 5 TIÊU CHÍ")
+    st.info("Hãy tải lên các file theo yêu cầu bên dưới. Tất cả phải đúng định dạng!")
 
-    tab1, tab2 = st.tabs(["📥 Nhập & Xử lý dữ liệu", "📤 Xuất kết quả"])
+    # --- Upload file CKH & KKH ---
+    uploaded_ckh = st.file_uploader("Tải lên các file CKH (HDV_CHITIET_CKH_*.xlsx)", accept_multiple_files=True)
+    uploaded_kkh = st.file_uploader("Tải lên các file KKH (HDV_CHITIET_KKH_*.xlsx)", accept_multiple_files=True)
 
-    # ================= TAB 1 ===========================================
-    with tab1:
-        st.header("1️⃣ Upload dữ liệu đầu vào")
+    # --- Upload file Mức 30 ---
+    file_muc30 = st.file_uploader("Tải lên file Mục 30", type=["xls", "xlsx"])
 
-        file_dksms = st.file_uploader("Upload Muc14_DKSMS.txt,xlsx", type=["txt", "xlsx"])
-        file_scm10 = st.file_uploader("Upload Muc14_SCM010.xlsx", type=["xlsx"])
-        file_42a = st.file_uploader("Upload HDV_CHITIET_KKH_*.xls (4.2.a)", type=["xls"], accept_multiple_files=True)
-        file_42b = st.file_uploader("Upload BC_LAY_CHARGELEVELCODE_THEO_KHCN.xlsx", type=["xlsx"])
-        file_42c = st.file_uploader("Upload 10_DanhSachNhanSu.xlsx", type=["xlsx"])
-        file_42d = st.file_uploader("Upload DS Nghi Viec.xlsx", type=["xlsx"])
-        file_mapping = st.file_uploader("Upload Mapping_1405.xlsx", type=["xlsx"])
+    # --- Upload file SMS ---
+    file_sms = st.file_uploader("Tải lên file Mục 14 – DK_SMS (.txt)", type=["txt"])
 
-        chi_nhanh = st.text_input("Nhập tên chi nhánh hoặc mã SOL (VD: HANOI, 001)").upper()
+    # --- Upload file SCM010 ---
+    file_scm10 = st.file_uploader("Tải lên file SCM010 (.xlsx)", type=["xlsx"])
 
-        run_btn = st.button("▶️ CHẠY XỬ LÝ")
-
-        if run_btn:
-            if not all([file_dksms, file_scm10, file_42a, file_42b, file_42c, file_42d, file_mapping]):
-                st.error("⚠️ Bạn phải upload đầy đủ tất cả các file!")
-                st.stop()
-
-            st.success("⏳ Đang xử lý dữ liệu...")
-
-            # ================= TIÊU CHÍ 1,2,3 ==================================
-            df_sms = pd.read_csv(file_dksms, sep="\t", on_bad_lines="skip", dtype=str)
-
-            df_sms["FORACID"] = df_sms["FORACID"].astype(str)
-            df_sms["ORGKEY"] = df_sms["ORGKEY"].astype(str)
-            df_sms["C_MOBILE_NO"] = df_sms["C_MOBILE_NO"].astype(str)
-            df_sms["CRE DATE"] = pd.to_datetime(df_sms["CRE_DATE"], errors="coerce").dt.strftime("%m/%d/%Y")
-            df_sms = df_sms[df_sms["FORACID"].str.match(r"^\d+$")]
-            df_sms = df_sms[df_sms["CUSTTPCD"].str.upper() != "KHDN"]
-
-            df_scm10 = pd.read_excel(file_scm10, dtype=str)
-            df_scm10.columns = df_scm10.columns.str.strip()
-            df_scm10["CIF_ID"] = df_scm10["CIF_ID"].astype(str)
-
-            df_sms["PL DICH VU"] = "SMS"
-            df_scm10["ORGKEY"] = df_scm10["CIF_ID"]
-            df_scm10["PL DICH VU"] = "SCM010"
-
-            df_merged = pd.concat(
-                [df_sms, df_scm10[["ORGKEY", "PL DICH VU"]].drop_duplicates()],
-                ignore_index=True
-            )
-
-            df_uyquyen = df_merged.copy()
-
-            # --- Đánh dấu ---
-            tk_sms = set(df_merged[df_merged["PL DICH VU"] == "SMS"]["FORACID"])
-            df_uyquyen["TK có đăng ký SMS"] = df_uyquyen["FORACID"].apply(lambda x: "X" if x in tk_sms else "")
-
-            cif_scm10 = set(df_merged[df_merged["PL DICH VU"] == "SCM010"]["ORGKEY"])
-            df_uyquyen["CIF có đăng ký SCM010"] = df_uyquyen["ORGKEY"].apply(lambda x: "X" if x in cif_scm10 else "")
-
-            # --- Tiêu chí 3 ---
-            df_tc3 = df_uyquyen.copy()
-            grouped = df_tc3.groupby("NGUOI_DUOC_UY_QUYEN")["NGUOI_UY_QUYEN"].nunique().reset_index()
-            many = set(grouped[grouped["NGUOI_UY_QUYEN"] >= 2]["NGUOI_DUOC_UY_QUYEN"])
-            df_tc3["1 người nhận UQ của nhiều người"] = df_tc3["NGUOI_DUOC_UY_QUYEN"].apply(
-                lambda x: "X" if x in many else ""
-            )
-
-            # ================= TIÊU CHÍ 4 ==================================
-            df_ghep42a = pd.concat([pd.read_excel(f, dtype=str) for f in file_42a], ignore_index=True)
-            df_42a = df_ghep42a[df_ghep42a["BRCD"].astype(str).str.upper().str.contains(chi_nhanh)]
-
-            cols_42a = ['BRCD', 'DEPTCD', 'CUST_TYPE', 'CUSTSEQ', 'NMLOC', 'BIRTH_DAY',
-                        'IDXACNO', 'SCHM_NAME', 'CCYCD', 'CURBAL_VN', 'OPNDT_FIRST', 'OPNDT_EFFECT']
-
-            df_42a = df_42a[cols_42a]
-            df_42a = df_42a[df_42a["CUST_TYPE"] == "KHCN"]
-            df_42a = df_42a[~df_42a["SCHM_NAME"].str.upper().str.contains(
-                "KY QUY|GIAI NGAN|CHI LUONG|TKTT THE|TRUNG GIAN"
-            )]
-
-            df_ghep42b = pd.read_excel(file_42b, dtype=str)
-            df_42b = df_ghep42b[df_ghep42b["CN_MO_TK"].astype(str).str.upper().str.contains(chi_nhanh)]
-
-            df_42c = pd.read_excel(file_42c, dtype=str)
-            df_42d = pd.read_excel(file_42d, dtype=str)
-
-            df_42a["CUSTSEQ"] = df_42a["CUSTSEQ"].astype(str)
-            df_42b["MACIF"] = df_42b["MACIF"].astype(str)
-
-            df_42a = df_42a.merge(
-                df_42b.drop_duplicates("MACIF")[["MACIF", "CHARGELEVELCODE_CIF"]],
-                left_on="CUSTSEQ",
-                right_on="MACIF",
-                how="left"
-            ).drop(columns=["MACIF"])
-
-            df_42b["STKKH"] = df_42b["STKKH"].astype(str)
-            df_42a["IDXACNO"] = df_42a["IDXACNO"].astype(str)
-
-            df_42a = df_42a.merge(
-                df_42b.drop_duplicates("STKKH")[["STKKH", "CHARGELEVELCODE_TK"]],
-                left_on="IDXACNO",
-                right_on="STKKH",
-                how="left"
-            ).drop(columns=["STKKH"])
-
-            df_42a["TK_GAN_CODE_UU_DAI_CBNV"] = np.where(df_42a["CHARGELEVELCODE_TK"] == "NVEIB", "X", "")
-
-            df_42a = df_42a.merge(
-                df_42c[["Mã số CIF", "Mã NV"]],
-                left_on="CUSTSEQ",
-                right_on="Mã số CIF",
-                how="left"
-            )
-
-            df_42a = df_42a.merge(
-                df_42d[["CIF", "Ngày thôi việc"]],
-                how="left",
-                left_on="CUSTSEQ",
-                right_on="CIF"
-            )
-
-            df_42a["CBNV_NGHI_VIEC"] = np.where(df_42a["CIF"].notna(), "X", "")
-            df_42a["NGAY_NGHI_VIEC"] = pd.to_datetime(df_42a["Ngày thôi việc"], errors="coerce").dt.strftime("%m/%d/%Y")
-
-            # ================= TIÊU CHÍ 5 ==================================
-            df_map = pd.read_excel(file_mapping, dtype=str)
-            df_map.columns = df_map.columns.str.lower()
-
-            df_map["xpcodedt"] = pd.to_datetime(df_map["xpcodedt"], errors="coerce")
-            df_map["uploaddt"] = pd.to_datetime(df_map["uploaddt"], errors="coerce")
-            df_map["SO_NGAY_MO_THE"] = (df_map["xpcodedt"] - df_map["uploaddt"]).dt.days
-
-            df_map["MO_DONG_TRONG_6_THANG"] = df_map.apply(
-                lambda r: "X" if (
-                    pd.notnull(r["SO_NGAY_MO_THE"]) and
-                    0 <= r["SO_NGAY_MO_THE"] < 180 and
-                    r["uploaddt"] > pd.to_datetime("2023-05-31")
-                ) else "",
-                axis=1
-            )
-
-            st.success("🎉 Hoàn tất xử lý tất cả 5 tiêu chí!")
-
-            # Lưu session
-            st.session_state["DF_SMS"] = df_sms
-            st.session_state["DF_UYQUYEN"] = df_uyquyen
-            st.session_state["DF_TC3"] = df_tc3
-            st.session_state["DF_42A"] = df_42a
-            st.session_state["DF_MAP"] = df_map
-
-    # ================= TAB 2 ===========================================
-    with tab2:
-
-        st.header("📤 Xuất file Excel theo 5 tiêu chí")
-
-        if "DF_SMS" not in st.session_state:
-            st.warning("⚠️ Bạn cần chạy xử lý ở tab 1 trước!")
+    if st.button("▶️ CHẠY XỬ LÝ DVKH"):
+        if not uploaded_ckh or not uploaded_kkh or not file_muc30 or not file_sms or not file_scm10:
+            st.error("⚠️ Bạn phải tải lên đầy đủ tất cả file!")
             return
 
-        df_sms = st.session_state["DF_SMS"]
-        df_uyquyen = st.session_state["DF_UYQUYEN"]
-        df_tc3 = st.session_state["DF_TC3"]
-        df_42a = st.session_state["DF_42A"]
-        df_map = st.session_state["DF_MAP"]
+        st.success("⏳ Đang xử lý... vui lòng đợi...")
 
+        # ==========================================
+        # 1) Đọc file CKH – KKH
+        # ==========================================
+        df_b_CKH = pd.concat([pd.read_excel(f, dtype=str) for f in uploaded_ckh], ignore_index=True)
+        df_b_KKH = pd.concat([pd.read_excel(f, dtype=str) for f in uploaded_kkh], ignore_index=True)
+        df_b = pd.concat([df_b_CKH, df_b_KKH], ignore_index=True)
+
+        # ==========================================
+        # 2) Đọc file Mục 30
+        # ==========================================
+        df_a = pd.read_excel(file_muc30, dtype=str)
+
+        # Lọc mô tả có chữ "chu ky"
+        df_a = df_a[df_a["DESCRIPTION"].str.contains(r"chu\s*ky|chuky|cky", case=False, na=False)]
+
+        # Convert ngày
+        df_a["EXPIRYDATE"] = pd.to_datetime(df_a["EXPIRYDATE"], format='%Y%m%d', errors='coerce')
+        df_a["EFFECTIVEDATE"] = pd.to_datetime(df_a["EFFECTIVEDATE"], format='%Y%m%d', errors='coerce')
+
+        df_a["EXPIRYDATE"] = df_a["EXPIRYDATE"].dt.strftime('%m/%d/%Y')
+        df_a["EFFECTIVEDATE"] = df_a["EFFECTIVEDATE"].dt.strftime('%m/%d/%Y')
+
+        # Lọc doanh nghiệp
+        keywords = ["CONG TY", "CTY", "CONGTY", "CÔNG TY", "CÔNGTY"]
+        df_a = df_a[~df_a["NGUOI_UY_QUYEN"].str.upper().str.contains("|".join(keywords))]
+
+        # Tách tên người được ủy quyền
+        def extract_name(value):
+            parts = re.split(r'[-,]', str(value))
+            for part in parts:
+                name = part.strip()
+                if re.fullmatch(r'[A-Z ]{3,}', name):
+                    return name
+            return value
+
+        df_a["NGUOI_DUOC_UY_QUYEN"] = df_a["NGUOI_DUOC_UY_QUYEN"].apply(extract_name)
+
+        # ==========================================
+        # 3) MERGE CKH–KKH
+        # ==========================================
+        df_a['TK_DUOC_UY_QUYEN'] = df_a['TK_DUOC_UY_QUYEN'].astype(str)
+        df_b['IDXACNO'] = df_b['IDXACNO'].astype(str)
+
+        merged = df_a.merge(
+            df_b[["IDXACNO", "CUSTSEQ"]],
+            left_on="TK_DUOC_UY_QUYEN",
+            right_on="IDXACNO",
+            how="left"
+        )
+
+        merged["CIF_NGUOI_UY_QUYEN"] = merged["CUSTSEQ"].apply(
+            lambda x: str(int(x)) if pd.notna(x) else "NA"
+        )
+
+        # Loại TK CKH / KKH
+        set_ckh = set(df_b_CKH['CUSTSEQ'].astype(str))
+        set_kkh = set(df_b_KKH['IDXACNO'].astype(str))
+
+        def phan_loai_tk(tk):
+            if tk in set_ckh:
+                return 'CKH'
+            elif tk in set_kkh:
+                return 'KKH'
+            else:
+                return 'NA'
+
+        merged['LOAI_TK'] = merged['TK_DUOC_UY_QUYEN'].astype(str).apply(phan_loai_tk)
+
+        # ==========================================
+        # 4) Xử lý mục 14 SMS
+        # ==========================================
+        df_sms = pd.read_csv(file_sms, sep='\t', on_bad_lines='skip', dtype=str)
+
+        df_sms = df_sms[df_sms["FORACID"].str.match(r"^\d+$")]
+        df_sms = df_sms[df_sms["CUSTTPCD"].str.upper() != 'KHDN']
+
+        df_sms["CRE_DATE"] = pd.to_datetime(df_sms["CRE_DATE"], errors='coerce').dt.strftime('%m/%d/%Y')
+
+        # SCM010
+        df_scm10 = pd.read_excel(file_scm10, dtype=str)
+        df_scm10['ORGKEY'] = df_scm10['CIF_ID'].astype(str)
+
+        df_sms['PL DICH VU'] = "SMS"
+        df_scm10['PL DICH VU'] = "SCM010"
+
+        df_all_service = pd.concat([
+            df_sms[['FORACID', 'ORGKEY', 'PL DICH VU']],
+            df_scm10[['ORGKEY', 'PL DICH VU']]
+        ], ignore_index=True)
+
+        # ==========================================
+        # 5) Kết hợp Uy quyền
+        # ==========================================
+        df_uyquyen = merged.copy()
+        df_uyquyen['TK có đăng ký SMS'] = df_uyquyen['TK_DUOC_UY_QUYEN'].apply(
+            lambda x: "X" if str(x) in set(df_sms['FORACID']) else ""
+        )
+
+        df_uyquyen['CIF có đăng ký SCM010'] = df_uyquyen['CIF_NGUOI_UY_QUYEN'].apply(
+            lambda x: "X" if str(x) in set(df_scm10['ORGKEY']) else ""
+        )
+
+        # ==========================================
+        # 6) TÌM "1 người nhận UQ của nhiều người"
+        # ==========================================
+        df_tc3 = df_uyquyen.copy()
+
+        group = df_tc3.groupby("NGUOI_DUOC_UY_QUYEN")["NGUOI_UY_QUYEN"].nunique()
+        nhieu_uq = set(group[group >= 2].index)
+
+        df_tc3["1 người nhận UQ của nhiều người"] = df_tc3["NGUOI_DUOC_UY_QUYEN"].apply(
+            lambda x: "X" if x in nhieu_uq else ""
+        )
+
+        # ==========================================
+        # 7) Xuất Excel
+        # ==========================================
         output = BytesIO()
-
         with pd.ExcelWriter(output, engine="openpyxl") as writer:
-            df_sms.to_excel(writer, "TieuChi1", index=False)
-            df_uyquyen.to_excel(writer, "TieuChi2", index=False)
-            df_tc3.to_excel(writer, "TieuChi3", index=False)
-            df_42a.to_excel(writer, "TieuChi4", index=False)
-            df_map.to_excel(writer, "TieuChi5", index=False)
+            merged.to_excel(writer, sheet_name="tieu chi 1", index=False)
+            df_uyquyen.to_excel(writer, sheet_name="tieu chi 2", index=False)
+            df_tc3.to_excel(writer, sheet_name="tieu chi 3", index=False)
+
+        st.success("🎉 Hoàn tất DVKH!")
 
         st.download_button(
-            label="📥 Tải xuống file Excel 5 tiêu chí",
+            label="⬇️ Tải về DVKH.xlsx",
             data=output.getvalue(),
-            file_name="DVKH_5_TIEU_CHI.xlsx",
+            file_name="DVKH.xlsx",
             mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
         )

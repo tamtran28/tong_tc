@@ -600,7 +600,16 @@ def run_dvkh_5_tieuchi():
             else:
                 try:
                     audit_log("run_tieuchi_4_5_start", f"chi_nhanh={chi_nhanh}", user)
-                    df_42a_processed, df_mapping_final = process_tieuchi_4_5(files_42a_upload, file_42b_upload, file_42c_upload, file_42d_upload, file_mapping_upload, chi_nhanh)
+                   # df_42a_final, df_mapping_final = process_tieuchi_4_5(files_42a_upload, file_42b_upload, file_42c_upload, file_42d_upload, file_mapping_upload, chi_nhanh)
+                    df_42a_final, df_mapping_final = process_tieuchi_4_5(
+                        files_42a_upload=files_42a_upload,
+                        file_42b_upload=file_42b_upload,
+                        file_42c_upload=file_42c_upload,
+                        file_42d_upload=file_42d_upload,
+                        file_mapping_upload=file_mapping_upload,
+                        chi_nhanh=chi_nhanh
+                    )
+
                     st.success("Xử lý xong Tiêu chí 4-5")
                     st.subheader("Preview Tiêu chí 4 (42a)")
                     st.dataframe(df_42a_processed.head(200), use_container_width=True)

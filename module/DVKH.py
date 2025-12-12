@@ -357,8 +357,10 @@ def run_dvkh_5_tieuchi():
     #                 audit_log("run_tieuchi_1_3_error", str(e), user)
 
 
-
-       def extract_excel_from_zip(uploaded_zip):
+    # =============================
+    # GIẢI NÉN ZIP CHỈ LẤY EXCEL
+    # =============================
+    def extract_excel_from_zip(uploaded_zip):
         """Trả về list các (filename, BytesIO) của file .xls/.xlsx trong ZIP."""
         result = []
         try:
@@ -529,6 +531,7 @@ def run_dvkh_5_tieuchi():
             except Exception as e:
                 st.error("Lỗi khi xử lý Tiêu chí 1-3.")
                 st.exception(e)
+
       
     # ---- TAB 2 ----
     with tab2:

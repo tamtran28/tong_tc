@@ -358,164 +358,177 @@ def run_dvkh_5_tieuchi():
 
 
 
-    # =============================
-    # GIẢI NÉN ZIP CHỈ LẤY EXCEL
-    # =============================
-    def extract_excel_from_zip(uploaded_zip):
-        """Trả về list các (filename, BytesIO) của file .xls/.xlsx trong ZIP."""
-        result = []
+   def extract_excel_from_zip(uploaded_zip):
+    """Trả về list các (filename, BytesIO) của file .xls/.xlsx trong ZIP."""
+    result = []
+    try:
+        z = zipfile.ZipFile(uploaded_zip)
+        for name in z.namelist():
+            if name.lower().endswith((".xls", ".xlsx")):
+                result.append((name, io.BytesIO(z.read(name))))
+        return result
+    except:
+        return []
+
+# =============================
+# GIẢI NÉN 1 FILE TXT TỪ ZIP
+# =============================
+def extract_sms_txt_from_zip(uploaded_zip_file):
+    """Trích xuất file Muc14_DKSMS.txt từ ZIP (trong bộ nhớ)."""
+    try:
+        z = zipfile.ZipFile(uploaded_zip_file)
+        for name in z.namelist():
+            if name.lower().endswith(".txt"):
+                return io.BytesIO(z.read(name)), name
+        return None, None
+    except:
+        return None, None
+
+
+# =============================
+# UI TAB 1
+# =============================
+def render_tieu_chi_1_3(process_uyquyen_sms_scm, to_excel_bytes):
+
+    st.header("A. Tiêu chí 1-3: Ủy quyền + SMS + SCM010")
+    st.info("Upload: CKH.zip hoặc file Excel, KKH.zip hoặc file Excel, MUC30, ZIP chứa Muc14_DKSMS.txt, SCM010.xlsx")
+
+    # ===============================
+    # CKH: cho phép ZIP hoặc nhiều Excel
+    # ===============================
+    uploaded_ckh_zip = st.file_uploader(
+        "Upload CKH ZIP (nếu có)",
+        type=["zip"],
+        key="ckh_zip"
+    )
+
+    uploaded_ckh_excels = st.file_uploader(
+        "Hoặc upload nhiều file Excel CKH trực tiếp",
+        type=["xls", "xlsx"],
+        accept_multiple_files=True,
+        key="ckh_files"
+    )
+
+    # ===============================
+    # KKH: ZIP hoặc nhiều Excel
+    # ===============================
+    uploaded_kkh_zip = st.file_uploader(
+        "Upload KKH ZIP (nếu có)",
+        type=["zip"],
+        key="kkh_zip"
+    )
+
+    uploaded_kkh_excels = st.file_uploader(
+        "Hoặc upload nhiều file Excel KKH trực tiếp",
+        type=["xls", "xlsx"],
+        accept_multiple_files=True,
+        key="kkh_files"
+    )
+
+    # ===============================
+    uploaded_muc30_file = st.file_uploader(
+        "MUC30",
+        type=["xls", "xlsx"],
+        key="muc30"
+    )
+
+    uploaded_sms_zip = st.file_uploader(
+        "ZIP chứa Muc14_DKSMS.txt",
+        type=["zip"],
+        key="sms_zip"
+    )
+
+    uploaded_scm10_xlsx_file = st.file_uploader(
+        "Muc14_SCM010.xlsx",
+        type=["xls", "xlsx"],
+        key="scm10"
+    )
+
+    # ===============================
+    if st.button("Chạy Tiêu chí 1-3"):
+
+        # ===============================
+        # CKH — ZIP hoặc Excel
+        # ===============================
+        ckh_streams = []
+
+        if uploaded_ckh_zip is not None:
+            extracted = extract_excel_from_zip(uploaded_ckh_zip)
+            if len(extracted) == 0:
+                st.error("CKH ZIP không chứa file Excel.")
+                st.stop()
+            ckh_streams = [x[1] for x in extracted]
+
+        elif uploaded_ckh_excels:
+            ckh_streams = [io.BytesIO(f.read()) for f in uploaded_ckh_excels]
+
+        else:
+            st.error("Bạn phải upload CKH ZIP hoặc file Excel CKH!")
+            st.stop()
+
+        # ===============================
+        # KKH — ZIP hoặc Excel
+        # ===============================
+        kkh_streams = []
+
+        if uploaded_kkh_zip is not None:
+            extracted = extract_excel_from_zip(uploaded_kkh_zip)
+            if len(extracted) == 0:
+                st.error("KKH ZIP không chứa file Excel.")
+                st.stop()
+            kkh_streams = [x[1] for x in extracted]
+
+        elif uploaded_kkh_excels:
+            kkh_streams = [io.BytesIO(f.read()) for f in uploaded_kkh_excels]
+
+        else:
+            st.error("Bạn phải upload KKH ZIP hoặc file Excel KKH!")
+            st.stop()
+
+        # ===============================
+        # SMS TXT từ ZIP
+        # ===============================
+        if not uploaded_sms_zip:
+            st.error("Bạn phải upload ZIP chứa Muc14_DKSMS.txt")
+            st.stop()
+
+        sms_txt_bytes, sms_filename = extract_sms_txt_from_zip(uploaded_sms_zip)
+        if sms_txt_bytes is None:
+            st.error("ZIP SMS không có file .txt")
+            st.stop()
+
+        # ===============================
+        # XỬ LÝ
+        # ===============================
         try:
-            z = zipfile.ZipFile(uploaded_zip)
-            for name in z.namelist():
-                if name.lower().endswith((".xls", ".xlsx")):
-                    result.append((name, io.BytesIO(z.read(name))))
-            return result
-        except:
-            return []
-    
-    
-    # =============================
-    # GIẢI NÉN 1 FILE TXT TỪ ZIP
-    # =============================
-    def extract_sms_txt_from_zip(uploaded_zip_file):
-        """Trích xuất file Muc14_DKSMS.txt từ ZIP (trong bộ nhớ)."""
-        try:
-            z = zipfile.ZipFile(uploaded_zip_file)
-            for name in z.namelist():
-                if name.lower().endswith(".txt"):
-                    return io.BytesIO(z.read(name)), name
-            return None, None
-        except:
-            return None, None
-    
-    
-    
-    # =============================
-    # UI TAB 1
-    # =============================
-    with tab1:
-        st.header("A. Tiêu chí 1-3: Ủy quyền + SMS + SCM010")
-        st.info("Upload: CKH.zip, KKH.zip, MUC30.xlsx, ZIP chứa Muc14_DKSMS.txt, SCM010.xlsx")
-    
-        # CKH ZIP
-        uploaded_ckh_zip = st.file_uploader(
-            "HDV_CHITIET_CKH.zip (nhiều file Excel bên trong)",
-            type=["zip"],
-            key="dvkh_ckh"
-        )
-    
-        # KKH ZIP
-        uploaded_kkh_zip = st.file_uploader(
-            "HDV_CHITIET_KKH.zip (nhiều file Excel bên trong)",
-            type=["zip"],
-            key="dvkh_kkh"
-        )
-    
-        # MUC30
-        uploaded_muc30_file = st.file_uploader(
-            "MUC 30 (Muc30)",
-            type=["xls", "xlsx"],
-            key="dvkh_muc30"
-        )
-    
-        # SMS ZIP
-        uploaded_sms_zip = st.file_uploader(
-            "Muc14_DKSMS.zip (bên trong phải có 1 file .txt)",
-            type=["zip"],
-            key="dvkh_sms_zip"
-        )
-    
-        # SCM010
-        uploaded_scm10_xlsx_file = st.file_uploader(
-            "Muc14_SCM010.xlsx",
-            type=["xls", "xlsx"],
-            key="dvkh_scm10"
-        )
-    
-    
-        # ========================================
-        # BUTTON
-        # ========================================
-        if st.button("Chạy Tiêu chí 1-3"):
-    
-            # ----- kiểm tra upload -----
-            if not uploaded_ckh_zip:
-                st.error("Bạn phải upload file ZIP CKH.")
-                st.stop()
-    
-            if not uploaded_kkh_zip:
-                st.error("Bạn phải upload file ZIP KKH.")
-                st.stop()
-    
-            if not uploaded_sms_zip:
-                st.error("Bạn phải upload file ZIP chứa Muc14_DKSMS.txt.")
-                st.stop()
-    
-            # ========================================
-            # GIẢI NÉN CKH ZIP
-            # ========================================
-            ckh_files = extract_excel_from_zip(uploaded_ckh_zip)
-            if len(ckh_files) == 0:
-                st.error("ZIP CKH không chứa file Excel (.xls/.xlsx).")
-                st.stop()
-    
-            # convert -> danh sách BytesIO để truyền vào xử lý
-            ckh_streams = [f[1] for f in ckh_files]
-    
-    
-            # ========================================
-            # GIẢI NÉN KKH ZIP
-            # ========================================
-            kkh_files = extract_excel_from_zip(uploaded_kkh_zip)
-            if len(kkh_files) == 0:
-                st.error("ZIP KKH không chứa file Excel (.xls/.xlsx).")
-                st.stop()
-    
-            kkh_streams = [f[1] for f in kkh_files]
-    
-    
-            # ========================================
-            # GIẢI NÉN SMS.TXT TỪ ZIP
-            # ========================================
-            sms_txt_bytes, sms_filename = extract_sms_txt_from_zip(uploaded_sms_zip)
-    
-            if sms_txt_bytes is None:
-                st.error("Không tìm thấy file .txt trong ZIP SMS. Vui lòng kiểm tra lại!")
-                st.stop()
-    
-    
-            # ========================================
-            # XỬ LÝ DỮ LIỆU
-            # ========================================
-            try:
-                merged, df_tc3 = process_uyquyen_sms_scm(
-                    ckh_streams,
-                    kkh_streams,
-                    uploaded_muc30_file,
-                    sms_txt_bytes,
-                    uploaded_scm10_xlsx_file
-                )
-    
-                st.success("Xử lý xong Tiêu chí 1-3")
-    
-                st.subheader("Kết quả — preview (Tiêu chí 3)")
-                st.dataframe(df_tc3.head(200), use_container_width=True)
-    
-                out_bytes = to_excel_bytes({
-                    "UyQuyen": merged,
-                    "UyQuyen_TC3": df_tc3
-                })
-    
-                st.download_button(
-                    "📥 Tải Excel Tiêu chí 1-3",
-                    data=out_bytes,
-                    file_name="DVKH_TC1_3.xlsx",
-                    mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-                )
-    
-            except Exception as e:
-                st.error("Lỗi khi xử lý Tiêu chí 1-3.")
-                st.exception(e)
+            merged, df_tc3 = process_uyquyen_sms_scm(
+                ckh_streams,
+                kkh_streams,
+                uploaded_muc30_file,
+                sms_txt_bytes,
+                uploaded_scm10_xlsx_file
+            )
+
+            st.success("Xử lý xong Tiêu chí 1-3")
+
+            st.subheader("Kết quả — preview (TC3)")
+            st.dataframe(df_tc3.head(200), use_container_width=True)
+
+            out_bytes = to_excel_bytes({
+                "UyQuyen": merged,
+                "UyQuyen_TC3": df_tc3
+            })
+
+            st.download_button(
+                "📥 Tải Excel Tiêu chí 1-3",
+                data=out_bytes,
+                file_name="DVKH_TC1_3.xlsx",
+                mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+            )
+
+        except Exception as e:
+            st.error("Lỗi khi xử lý Tiêu chí 1-3.")
+            st.exception(e)
   
     # ---- TAB 2 ----
     with tab2:

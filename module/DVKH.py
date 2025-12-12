@@ -3,8 +3,12 @@
 Module DVKH cho Streamlit
 Bao gồm:
 - Tab A: Tiêu chí 1-3 (Ủy quyền + SMS + SCM010)
-- Tab B: Tiêu chí 4 & 5 (42a & Mapping)
-Ghi audit vào CSV dvkh_audit.csv trong working dir.
+- Tab B: Tiêu chí 4 (HDV KKH + chargelevel + nhân sự) và Tiêu chí 5 (Mapping/1405)
+
+Tính năng:
+- Hỗ trợ upload đơn file Excel hoặc ZIP (với nhiều Excel bên trong) cho CKH/KKH, SMS zip chứa .txt.
+- Audit log vào dvkh_audit.csv (append).
+- Xuất Excel nhiều sheet (ví dụ: Tieu_chi_4 + Tieu_chi_5).
 """
 
 import streamlit as st
@@ -12,11 +16,10 @@ import pandas as pd
 import numpy as np
 import io
 import re
-import glob
 import zipfile
 import os
 from datetime import datetime
-from typing import List, Optional
+from typing import List, Optional, Tuple
 
 # Cố gắng lấy user hiện tại từ hệ thống auth (nếu project của bạn có)
 try:
@@ -27,9 +30,10 @@ except Exception:
 
 
 # ---------------------------
-# Constants / utils
+# Cấu hình & Audit
 # ---------------------------
 AUDIT_FILE = "dvkh_audit.csv"
+
 
 def audit_log(action: str, note: str = "", user: Optional[dict] = None):
     """Ghi log hoạt động (append CSV)."""
@@ -43,58 +47,91 @@ def audit_log(action: str, note: str = "", user: Optional[dict] = None):
     df_row.to_csv(AUDIT_FILE, mode="a", header=header, index=False, encoding="utf-8-sig")
 
 
+# ---------------------------
+# Utilities đọc/ghi
+# ---------------------------
 @st.cache_data(show_spinner=False)
 def read_excel_file_bytesio(uploaded_file) -> pd.DataFrame:
-    """Đọc file uploaded (pandas) với dtype=str an toàn.
-    uploaded_file có thể là Streamlit UploadedFile hoặc BytesIO."""
-    # ensure pointer at start
+    """Đọc file Excel từ UploadedFile / BytesIO; trả DataFrame dtype=str"""
+    # streamlit uploaded_file has .read() but pandas accepts file-like; pass-through
     try:
-        if hasattr(uploaded_file, "seek"):
-            uploaded_file.seek(0)
-    except Exception:
-        pass
-    return pd.read_excel(uploaded_file, dtype=str)
+        return pd.read_excel(uploaded_file, dtype=str)
+    except Exception as e:
+        # thử read bằng io.BytesIO nếu uploaded_file là UploadedFile và đã được .read() trước
+        try:
+            raw = uploaded_file.read()
+            return pd.read_excel(io.BytesIO(raw), dtype=str)
+        except Exception:
+            raise
 
 
 @st.cache_data(show_spinner=False)
-def read_text_file_bytesio(uploaded_file, sep='\t') -> pd.DataFrame:
-    """Đọc txt (tab-separated) từ UploadedFile hoặc BytesIO"""
+def read_text_file_bytesio(uploaded_file, sep: str = "\t") -> pd.DataFrame:
+    """Đọc file text (tab-separated) từ UploadedFile / BytesIO"""
     try:
-        if hasattr(uploaded_file, "seek"):
-            uploaded_file.seek(0)
-        return pd.read_csv(uploaded_file, sep=sep, dtype=str, on_bad_lines='skip')
-    except Exception as e:
-        # trả về DataFrame rỗng nếu ko đọc được
-        return pd.DataFrame()
+        return pd.read_csv(uploaded_file, sep=sep, dtype=str, on_bad_lines="skip")
+    except Exception:
+        try:
+            raw = uploaded_file.read()
+            return pd.read_csv(io.BytesIO(raw), sep=sep, dtype=str, on_bad_lines="skip")
+        except Exception:
+            raise
 
 
-def safe_to_datetime(series, fmt=None):
-    if fmt:
-        return pd.to_datetime(series, format=fmt, errors='coerce')
-    return pd.to_datetime(series, errors='coerce')
+def safe_to_datetime(series):
+    return pd.to_datetime(series, errors="coerce")
 
 
 def to_excel_bytes(dfs: dict) -> bytes:
-    """Trả về bytes của Excel (multi-sheet)."""
     output = io.BytesIO()
     with pd.ExcelWriter(output, engine="openpyxl") as writer:
         for name, df in dfs.items():
-            sheet = (name or "Sheet")[:31]
-            try:
-                df.to_excel(writer, sheet_name=sheet, index=False)
-            except Exception:
-                # nếu df rỗng hoặc lỗi, tạo DataFrame trống
-                pd.DataFrame().to_excel(writer, sheet_name=sheet, index=False)
+            sheet = name[:31]
+            df.to_excel(writer, sheet_name=sheet, index=False)
     output.seek(0)
     return output.getvalue()
 
 
-def ensure_columns(df: pd.DataFrame, columns: List[str]):
-    """Thêm các cột thiếu vào df với giá trị rỗng để tránh KeyError."""
-    for c in columns:
+def ensure_columns(df: pd.DataFrame, cols: List[str]) -> pd.DataFrame:
+    for c in cols:
         if c not in df.columns:
             df[c] = ""
     return df
+
+
+# ---------------------------
+# ZIP helpers
+# ---------------------------
+def extract_excel_from_zip_bytes(zip_uploaded) -> List[Tuple[str, io.BytesIO]]:
+    """
+    Trả về list các tuple (filename, BytesIO) của file xls/xlsx trong zip_uploaded.
+    zip_uploaded: streamlit UploadedFile hoặc BytesIO
+    """
+    try:
+        raw = zip_uploaded.read() if hasattr(zip_uploaded, "read") else zip_uploaded
+        z = zipfile.ZipFile(io.BytesIO(raw))
+        res = []
+        for name in z.namelist():
+            if name.lower().endswith((".xls", ".xlsx")):
+                res.append((name, io.BytesIO(z.read(name))))
+        return res
+    except Exception:
+        return []
+
+
+def extract_text_from_zip_bytes(zip_uploaded) -> Tuple[Optional[io.BytesIO], Optional[str]]:
+    """
+    Trả về (BytesIO, filename) của file .txt đầu tiên trong zip.
+    """
+    try:
+        raw = zip_uploaded.read() if hasattr(zip_uploaded, "read") else zip_uploaded
+        z = zipfile.ZipFile(io.BytesIO(raw))
+        for name in z.namelist():
+            if name.lower().endswith(".txt"):
+                return io.BytesIO(z.read(name)), name
+        return None, None
+    except Exception:
+        return None, None
 
 
 # ---------------------------
@@ -108,44 +145,90 @@ def process_uyquyen_sms_scm(
     uploaded_scm10_xlsx_file,
     filter_chi_nhanh: Optional[str] = None
 ):
-    """Trả về merged (uy quyen với cột bổ sung), df_tc3 (final display)."""
-    # 1. ghép CKH + KKH
-    df_b_CKH = pd.concat([read_excel_file_bytesio(f) for f in uploaded_ckh_files], ignore_index=True) if uploaded_ckh_files else pd.DataFrame()
-    df_b_KKH = pd.concat([read_excel_file_bytesio(f) for f in uploaded_kkh_files], ignore_index=True) if uploaded_kkh_files else pd.DataFrame()
-    df_b = pd.concat([df_b_CKH, df_b_KKH], ignore_index=True) if (not df_b_CKH.empty or not df_b_KKH.empty) else pd.DataFrame()
+    """
+    Trả về (merged, df_tc3)
+    - merged: bảng Uy quyền gốc + các cột bổ sung
+    - df_tc3: bảng final dùng để hiển thị cho tiêu chí 3 (có cột '1 người nhận UQ của nhiều người')
+    uploaded_sms_txt_file có thể là: UploadedFile (.txt), BytesIO (nội dung txt), hoặc tên file-like
+    uploaded_ckh_files / uploaded_kkh_files: list of UploadedFile OR list of BytesIO
+    """
+    # --- 1. Ghép CKH + KKH ---
+    df_b_CKH = pd.DataFrame()
+    df_b_KKH = pd.DataFrame()
+    if uploaded_ckh_files:
+        frames = []
+        for f in uploaded_ckh_files:
+            # f may be UploadedFile or (name, BytesIO)
+            try:
+                frames.append(read_excel_file_bytesio(f))
+            except Exception:
+                # nếu f là tuple (name, BytesIO)
+                if isinstance(f, tuple) and hasattr(f[1], "read"):
+                    frames.append(read_excel_file_bytesio(f[1]))
+                else:
+                    raise
+        if frames:
+            df_b_CKH = pd.concat(frames, ignore_index=True)
 
-    # 2. đọc MUC30 (df_a)
+    if uploaded_kkh_files:
+        frames = []
+        for f in uploaded_kkh_files:
+            try:
+                frames.append(read_excel_file_bytesio(f))
+            except Exception:
+                if isinstance(f, tuple) and hasattr(f[1], "read"):
+                    frames.append(read_excel_file_bytesio(f[1]))
+                else:
+                    raise
+        if frames:
+            df_b_KKH = pd.concat(frames, ignore_index=True)
+
+    # df_b combine
+    if not df_b_CKH.empty and not df_b_KKH.empty:
+        df_b = pd.concat([df_b_CKH, df_b_KKH], ignore_index=True)
+    elif not df_b_CKH.empty:
+        df_b = df_b_CKH.copy()
+    elif not df_b_KKH.empty:
+        df_b = df_b_KKH.copy()
+    else:
+        df_b = pd.DataFrame()
+
+    # --- 2. Đọc MUC30 (df_a) ---
     df_a = read_excel_file_bytesio(uploaded_muc30_file)
 
-    # filter DESCRIPTION chứa chu ky
-    if "DESCRIPTION" in df_a.columns:
-        df_a = df_a[df_a["DESCRIPTION"].astype(str).str.contains(r"chu\s*ky|chuky|cky", case=False, na=False)].copy()
+    # lọc DESCRIPTION chứa chu ky
+    df_a = df_a[df_a.get("DESCRIPTION", "").astype(str).str.contains(r"chu\s*ky|chuky|cky", case=False, na=False)].copy()
 
-    # chuẩn hoá ngày
-    df_a["EXPIRYDATE"] = safe_to_datetime(df_a.get("EXPIRYDATE", pd.Series(dtype=str)))
-    df_a["EFFECTIVEDATE"] = safe_to_datetime(df_a.get("EFFECTIVEDATE", pd.Series(dtype=str)))
-    df_a["EXPIRYDATE_str"] = df_a["EXPIRYDATE"].dt.strftime("%m/%d/%Y")
-    df_a["EFFECTIVEDATE_str"] = df_a["EFFECTIVEDATE"].dt.strftime("%m/%d/%Y")
+    # parse ngày an toàn
+    df_a["EXPIRYDATE_dt"] = safe_to_datetime(df_a.get("EXPIRYDATE", pd.Series(dtype=str)))
+    df_a["EFFECTIVEDATE_dt"] = safe_to_datetime(df_a.get("EFFECTIVEDATE", pd.Series(dtype=str)))
+    df_a["EXPIRYDATE_str"] = df_a["EXPIRYDATE_dt"].dt.strftime("%m/%d/%Y")
+    df_a["EFFECTIVEDATE_str"] = df_a["EFFECTIVEDATE_dt"].dt.strftime("%m/%d/%Y")
 
-    # filter loại doanh nghiệp
+    # loại doanh nghiệp
     keywords = ["CONG TY", "CTY", "CONGTY", "CÔNG TY", "CÔNGTY"]
-    if "NGUOI_UY_QUYEN" in df_a.columns:
-        df_a = df_a[~df_a["NGUOI_UY_QUYEN"].astype(str).str.upper().str.contains("|".join(keywords), na=False)].copy()
+    df_a = df_a[~df_a.get("NGUOI_UY_QUYEN", "").astype(str).str.upper().str.contains("|".join(keywords), na=False)].copy()
 
-    # extract name
+    # tách NGUOI_DUOC_UY_QUYEN
     def extract_name(value):
-        parts = re.split(r'[-,]', str(value))
+        parts = re.split(r"[-,]", str(value))
         for part in parts:
             name = part.strip()
-            if re.fullmatch(r'[A-Z ]{3,}', name):
+            if re.fullmatch(r"[A-Z ]{3,}", name):
                 return name
         return value
 
     if "NGUOI_DUOC_UY_QUYEN" in df_a.columns:
         df_a["NGUOI_DUOC_UY_QUYEN"] = df_a["NGUOI_DUOC_UY_QUYEN"].apply(extract_name)
-    df_a = df_a.drop_duplicates(subset=[c for c in ["PRIMARY_SOL_ID", "TK_DUOC_UY_QUYEN", "NGUOI_DUOC_UY_QUYEN"] if c in df_a.columns], keep='first')
+    else:
+        df_a["NGUOI_DUOC_UY_QUYEN"] = ""
 
-    # 3. merge TK_DUOC_UY_QUYEN vs df_b IDXACNO -> get CUSTSEQ (CIF)
+    # drop duplicates
+    dedup_cols = [c for c in ["PRIMARY_SOL_ID", "TK_DUOC_UY_QUYEN", "NGUOI_DUOC_UY_QUYEN"] if c in df_a.columns]
+    if dedup_cols:
+        df_a = df_a.drop_duplicates(subset=dedup_cols, keep="first")
+
+    # --- 3. Merge TK_DUOC_UY_QUYEN vs df_b IDXACNO -> get CUSTSEQ (CIF) ---
     if not df_b.empty and "IDXACNO" in df_b.columns and "TK_DUOC_UY_QUYEN" in df_a.columns:
         df_a["TK_DUOC_UY_QUYEN"] = df_a["TK_DUOC_UY_QUYEN"].astype(str)
         df_b["IDXACNO"] = df_b["IDXACNO"].astype(str)
@@ -154,52 +237,54 @@ def process_uyquyen_sms_scm(
         merged = df_a.copy()
         merged["CUSTSEQ"] = np.nan
 
-    # CIF người ủy quyền
-    def fmt_custseq(x):
+    # CIF người ủy quyền => string (or 'NA')
+    def norm_custseq(x):
         try:
-            if pd.isna(x) or str(x).strip() == "" or str(x).lower() == "nan":
+            if pd.isna(x):
                 return "NA"
-            # some CUSTSEQ are floats like 12345.0
-            return str(int(float(x)))
-        except Exception:
+            sx = str(x).strip()
+            if sx == "" or sx.lower() == "nan":
+                return "NA"
+            # convert floats like '123.0' -> '123'
+            if re.match(r"^\d+(\.0+)?$", sx):
+                return str(int(float(sx)))
+            return sx
+        except:
             return "NA"
 
-    merged["CIF_NGUOI_UY_QUYEN"] = merged["CUSTSEQ"].apply(fmt_custseq)
+    merged["CIF_NGUOI_UY_QUYEN"] = merged.get("CUSTSEQ", pd.Series(dtype=str)).apply(norm_custseq)
 
-    # bổ sung CIF nếu cùng NGUOI_UY_QUYEN
-    cif_nguoi_uy_quyen_updated = merged["CIF_NGUOI_UY_QUYEN"].copy()
+    # Bổ sung CIF nếu cùng NGUOI_UY_QUYEN
+    cif_updated = merged["CIF_NGUOI_UY_QUYEN"].copy()
     if "NGUOI_UY_QUYEN" in merged.columns:
-        for nguoi_uq, group in merged.groupby("NGUOI_UY_QUYEN"):
+        for nguoi, group in merged.groupby("NGUOI_UY_QUYEN"):
             if len(group) >= 2:
-                cif_values = group["CIF_NGUOI_UY_QUYEN"]
-                has_na = "NA" in cif_values.unique()
-                actual_cifs = [c for c in cif_values.unique() if c != "NA"]
-                if has_na and actual_cifs:
-                    cif_to_fill = actual_cifs[0]
-                    indices_to_update = group[group["CIF_NGUOI_UY_QUYEN"] == "NA"].index
-                    cif_nguoi_uy_quyen_updated.loc[indices_to_update] = cif_to_fill
-    merged["CIF_NGUOI_UY_QUYEN"] = cif_nguoi_uy_quyen_updated
+                vals = group["CIF_NGUOI_UY_QUYEN"].unique().tolist()
+                actuals = [v for v in vals if v != "NA"]
+                if actuals:
+                    fill = actuals[0]
+                    idxs = group[group["CIF_NGUOI_UY_QUYEN"] == "NA"].index
+                    cif_updated.loc[idxs] = fill
+    merged["CIF_NGUOI_UY_QUYEN"] = cif_updated
 
-    # remove helper columns if exist
-    for drop_col in ["IDXACNO", "CUSTSEQ"]:
-        if drop_col in merged.columns:
-            merged.drop(columns=[drop_col], inplace=True, errors='ignore')
+    # remove helper cols if exist
+    for c in ["IDXACNO", "CUSTSEQ"]:
+        if c in merged.columns:
+            merged.drop(columns=[c], inplace=True, errors="ignore")
 
     # classify account type using CKH/KKH sets
-    set_ckh = set(df_b_CKH["CUSTSEQ"].astype(str).dropna()) if ("df_b_CKH" in locals() and not df_b_CKH.empty and "CUSTSEQ" in df_b_CKH.columns) else set()
-    set_kkh = set(df_b_KKH["IDXACNO"].astype(str).dropna()) if ("df_b_KKH" in locals() and not df_b_KKH.empty and "IDXACNO" in df_b_KKH.columns) else set()
+    set_ckh = set(df_b_CKH["CUSTSEQ"].astype(str).dropna()) if not df_b_CKH.empty and "CUSTSEQ" in df_b_CKH.columns else set()
+    set_kkh = set(df_b_KKH["IDXACNO"].astype(str).dropna()) if not df_b_KKH.empty and "IDXACNO" in df_b_KKH.columns else set()
 
     def phan_loai_tk(tk):
-        if str(tk) in set_ckh:
+        s = str(tk)
+        if s in set_ckh:
             return "CKH"
-        if str(tk) in set_kkh:
+        if s in set_kkh:
             return "KKH"
         return "NA"
 
-    if "TK_DUOC_UY_QUYEN" in merged.columns:
-        merged["LOAI_TK"] = merged["TK_DUOC_UY_QUYEN"].astype(str).apply(phan_loai_tk)
-    else:
-        merged["LOAI_TK"] = "NA"
+    merged["LOAI_TK"] = merged.get("TK_DUOC_UY_QUYEN", pd.Series(dtype=str)).astype(str).apply(phan_loai_tk)
 
     # time calculations
     merged["EXPIRYDATE_dt"] = safe_to_datetime(merged.get("EXPIRYDATE_str") if "EXPIRYDATE_str" in merged.columns else merged.get("EXPIRYDATE"))
@@ -209,44 +294,81 @@ def process_uyquyen_sms_scm(
     merged.loc[merged["YEAR_DIFF"].fillna(-1) == 99, "KHONG_NHAP_TGIAN_UQ"] = "X"
     merged["UQ_TREN_50_NAM"] = ""
     merged.loc[merged["YEAR_DIFF"].fillna(-1) >= 50, "UQ_TREN_50_NAM"] = "X"
-    merged.drop(columns=["EXPIRYDATE_dt", "EFFECTIVEDATE_dt", "YEAR_DIFF"], inplace=True, errors='ignore')
+    merged.drop(columns=["EXPIRYDATE_dt", "EFFECTIVEDATE_dt", "YEAR_DIFF"], inplace=True, errors="ignore")
 
-    # 4. SMS + SCM010 processing
-    df_sms_raw = read_text_file_bytesio(uploaded_sms_txt_file)  # expects tab separated
-    df_sms = df_sms_raw.copy()
-    for col in ["FORACID", "ORGKEY", "C_MOBILE_NO"]:
+    # --- 4. SMS + SCM010 ---
+    # uploaded_sms_txt_file may be BytesIO or UploadedFile or BytesIO from zip
+    if uploaded_sms_txt_file is None:
+        df_sms_raw = pd.DataFrame()
+    else:
+        # If uploaded_sms_txt_file is BytesIO -> pass through read_text_file_bytesio
+        if isinstance(uploaded_sms_txt_file, io.BytesIO):
+            df_sms_raw = read_text_file_bytesio(uploaded_sms_txt_file)
+        else:
+            # if it's UploadedFile or other
+            try:
+                df_sms_raw = read_text_file_bytesio(uploaded_sms_txt_file)
+            except Exception:
+                # try reading bytes then parse
+                try:
+                    raw = uploaded_sms_txt_file.read()
+                    df_sms_raw = read_text_file_bytesio(io.BytesIO(raw))
+                except Exception:
+                    df_sms_raw = pd.DataFrame()
+
+    df_sms = df_sms_raw.copy() if not df_sms_raw.empty else pd.DataFrame()
+    # normalize columns used
+    for col in ["FORACID", "ORGKEY", "C_MOBILE_NO", "CRE_DATE", "CUSTTPCD"]:
         if col in df_sms.columns:
             df_sms[col] = df_sms[col].astype(str)
-    # normalize date
+
     if "CRE_DATE" in df_sms.columns:
         df_sms["CRE_DATE_parsed"] = safe_to_datetime(df_sms["CRE_DATE"])
         df_sms["CRE_DATE_str"] = df_sms["CRE_DATE_parsed"].dt.strftime("%m/%d/%Y")
-    # filter
-    if "FORACID" in df_sms.columns:
-        df_sms = df_sms[df_sms["FORACID"].str.match(r'^\d+$', na=False)]
-    if "CUSTTPCD" in df_sms.columns:
-        df_sms = df_sms[df_sms["CUSTTPCD"].str.upper() != "KHDN"]
 
-    df_scm10 = read_excel_file_bytesio(uploaded_scm10_xlsx_file)
-    df_scm10 = df_scm10.rename(columns=lambda x: x.strip())
+    # filter by FORACID numeric and KHDN
+    if "FORACID" in df_sms.columns:
+        df_sms = df_sms[df_sms["FORACID"].str.match(r"^\d+$", na=False)]
+    if "CUSTTPCD" in df_sms.columns:
+        df_sms = df_sms[df_sms["CUSTTPCD"].astype(str).str.upper() != "KHDN"]
+
+    # SCM010
+    df_scm10 = pd.DataFrame()
+    try:
+        df_scm10 = read_excel_file_bytesio(uploaded_scm10_xlsx_file)
+        df_scm10 = df_scm10.rename(columns=lambda x: x.strip())
+    except Exception:
+        df_scm10 = pd.DataFrame()
+
     if "CIF_ID" in df_scm10.columns:
         df_scm10["CIF_ID"] = df_scm10["CIF_ID"].astype(str)
 
-    df_sms["PL DICH VU"] = "SMS"
-    df_scm10["ORGKEY"] = df_scm10.get("CIF_ID", pd.Series(dtype=str))
-    df_scm10["PL DICH VU"] = "SCM010"
-    df_merged_sms_scm10 = pd.concat([df_sms, df_scm10[["ORGKEY", "PL DICH VU"]].drop_duplicates()], ignore_index=True, axis=0)
+    # combine
+    if not df_sms.empty:
+        df_sms["PL DICH VU"] = "SMS"
+    if not df_scm10.empty:
+        df_scm10["ORGKEY"] = df_scm10.get("CIF_ID", pd.Series(dtype=str))
+        df_scm10["PL DICH VU"] = "SCM010"
 
-    # mark accounts registered for SMS and CIF registered for SCM010
-    df_sms_only = df_merged_sms_scm10[df_merged_sms_scm10["PL DICH VU"] == "SMS"] if "PL DICH VU" in df_merged_sms_scm10.columns else pd.DataFrame()
+    if not df_sms.empty and not df_scm10.empty:
+        df_merged_sms_scm10 = pd.concat([df_sms, df_scm10[["ORGKEY", "PL DICH VU"]].drop_duplicates()], ignore_index=True, axis=0)
+    elif not df_sms.empty:
+        df_merged_sms_scm10 = df_sms.copy()
+    elif not df_scm10.empty:
+        df_merged_sms_scm10 = df_scm10.copy()
+    else:
+        df_merged_sms_scm10 = pd.DataFrame()
+
+    df_sms_only = df_merged_sms_scm10[df_merged_sms_scm10.get("PL DICH VU", "") == "SMS"] if not df_merged_sms_scm10.empty else pd.DataFrame()
     tk_sms_set = set(df_sms_only["FORACID"].astype(str).dropna()) if not df_sms_only.empty and "FORACID" in df_sms_only.columns else set()
-    df_scm10_only = df_merged_sms_scm10[df_merged_sms_scm10["PL DICH VU"] == "SCM010"] if "PL DICH VU" in df_merged_sms_scm10.columns else pd.DataFrame()
+
+    df_scm10_only = df_merged_sms_scm10[df_merged_sms_scm10.get("PL DICH VU", "") == "SCM010"] if not df_merged_sms_scm10.empty else pd.DataFrame()
     cif_scm10_set = set(df_scm10_only["ORGKEY"].astype(str).dropna()) if not df_scm10_only.empty and "ORGKEY" in df_scm10_only.columns else set()
 
-    merged["TK có đăng ký SMS"] = merged["TK_DUOC_UY_QUYEN"].astype(str).apply(lambda x: "X" if str(x) in tk_sms_set else "")
-    merged["CIF có đăng ký SCM010"] = merged["CIF_NGUOI_UY_QUYEN"].astype(str).apply(lambda x: "X" if str(x) in cif_scm10_set else "")
+    merged["TK có đăng ký SMS"] = merged.get("TK_DUOC_UY_QUYEN", pd.Series(dtype=str)).astype(str).apply(lambda x: "X" if str(x) in tk_sms_set else "")
+    merged["CIF có đăng ký SCM010"] = merged.get("CIF_NGUOI_UY_QUYEN", pd.Series(dtype=str)).astype(str).apply(lambda x: "X" if str(x) in cif_scm10_set else "")
 
-    # 5. 1 người nhận nhiều UQ
+    # --- 5. 1 người nhận nhiều UQ (tiêu chí 3) ---
     df_tc3 = merged.copy()
     if "NGUOI_DUOC_UY_QUYEN" in df_tc3.columns and "NGUOI_UY_QUYEN" in df_tc3.columns:
         grouped = df_tc3.groupby("NGUOI_DUOC_UY_QUYEN")["NGUOI_UY_QUYEN"].nunique().reset_index()
@@ -260,7 +382,7 @@ def process_uyquyen_sms_scm(
 
 
 # ---------------------------
-# XỬ LÝ TIÊU CHÍ 4-5 (42a, mapping)
+# XỬ LÝ TIÊU CHÍ 4-5 (42a + Mapping)
 # ---------------------------
 def process_tieuchi_4_5(
     files_42a_upload: List,
@@ -271,33 +393,45 @@ def process_tieuchi_4_5(
     chi_nhanh: str
 ):
     """
-    Trả về df_42a_processed, df_map_processed
-    files_42a_upload: list UploadedFile (multiple HDV_CHITIET_KKH)
+    Trả về: df_42a_final, df_mapping_final
+    files_42a_upload: list of UploadedFile / list of (name, BytesIO)
     """
-    # 1) GHÉP 42A – KHÁCH HÀNG
-    df_42a = pd.concat([read_excel_file_bytesio(f) for f in files_42a_upload], ignore_index=True) if files_42a_upload else pd.DataFrame()
+    # 1) GHÉP 42A
+    frames = []
+    for f in files_42a_upload:
+        try:
+            frames.append(read_excel_file_bytesio(f))
+        except Exception:
+            if isinstance(f, tuple) and hasattr(f[1], "read"):
+                frames.append(read_excel_file_bytesio(f[1]))
+            else:
+                raise
+    df_42a = pd.concat(frames, ignore_index=True) if frames else pd.DataFrame()
     if df_42a.empty:
         return pd.DataFrame(), pd.DataFrame()
 
+    # filter chi nhánh
     if "BRCD" in df_42a.columns and chi_nhanh:
         df_42a = df_42a[df_42a["BRCD"].astype(str).str.upper().str.contains(chi_nhanh)]
+    # ensure columns
     cols_42a = [
         "BRCD", "DEPTCD", "CUST_TYPE", "CUSTSEQ", "NMLOC", "BIRTH_DAY",
         "IDXACNO", "SCHM_NAME", "CCYCD", "CURBAL_VN",
         "OPNDT_FIRST", "OPNDT_EFFECT"
     ]
     df_42a = ensure_columns(df_42a, cols_42a)
-    df_42a = df_42a[cols_42a].copy()
+    df_42a = df_42a[cols_42a]
 
     # Keep KHCN
     if "CUST_TYPE" in df_42a.columns:
         df_42a = df_42a[df_42a["CUST_TYPE"].astype(str).str.upper() == "KHCN"]
 
-    # exclude SCHM_NAME keywords
+    # exclude by SCHM_NAME
     exclude_keywords = ["KY QUY", "GIAI NGAN", "CHI LUONG", "TKTT THE", "TRUNG GIAN"]
-    df_42a = df_42a[~df_42a["SCHM_NAME"].astype(str).str.upper().str.contains("|".join(exclude_keywords), na=False)]
+    if "SCHM_NAME" in df_42a.columns:
+        df_42a = df_42a[~df_42a["SCHM_NAME"].astype(str).str.upper().str.contains("|".join(exclude_keywords), na=False)]
 
-    # 2) GHÉP 42B – CHARGELEVEL (MACIF + TK)
+    # 2) 42B - chargelevel
     df_42b = read_excel_file_bytesio(file_42b_upload)
     df_42b = ensure_columns(df_42b, ["MACIF", "STKKH", "CHARGELEVELCODE_CIF", "CHARGELEVELCODE_TK"])
 
@@ -313,21 +447,18 @@ def process_tieuchi_4_5(
                           left_on="IDXACNO", right_on="STKKH", how="left").drop(columns=["STKKH"], errors="ignore")
     df_42a.rename(columns={"CHARGELEVELCODE_TK": "CHARGELEVELCODE_CUA_TK"}, inplace=True)
 
-    df_42a["TK_GAN_CODE_UU_DAI_CBNV"] = np.where(df_42a["CHARGELEVELCODE_CUA_TK"] == "NVEIB", "X", "")
+    df_42a["TK_GAN_CODE_UU_DAI_CBNV"] = np.where(df_42a.get("CHARGELEVELCODE_CUA_TK", "") == "NVEIB", "X", "")
 
-    # 3) GHÉP NHÂN SỰ NGHỈ VIỆC
+    # 3) nhân sự nghỉ việc
     df_42d = read_excel_file_bytesio(file_42d_upload)
     df_42d = ensure_columns(df_42d, ["CIF", "Ngày thôi việc"])
     df_42a = df_42a.merge(df_42d[["CIF", "Ngày thôi việc"]], left_on="CUSTSEQ", right_on="CIF", how="left")
     df_42a["CBNV_NGHI_VIEC"] = np.where(df_42a["CIF"].notna(), "X", "")
     df_42a.rename(columns={"Ngày thôi việc": "NGAY_NGHI_VIEC"}, inplace=True)
-    try:
-        df_42a["NGAY_NGHI_VIEC"] = safe_to_datetime(df_42a["NGAY_NGHI_VIEC"]).dt.strftime("%m/%d/%Y")
-    except Exception:
-        df_42a["NGAY_NGHI_VIEC"] = df_42a["NGAY_NGHI_VIEC"].astype(str)
+    df_42a["NGAY_NGHI_VIEC"] = safe_to_datetime(df_42a["NGAY_NGHI_VIEC"]).dt.strftime("%m/%d/%Y")
     df_42a.drop(columns=["CIF"], inplace=True, errors="ignore")
 
-    # 4) MAPPING (TIÊU CHÍ 5)
+    # 4) Mapping (tiêu chí 5)
     df_map = read_excel_file_bytesio(file_mapping_upload)
     df_map.columns = df_map.columns.str.lower()
     need_cols = [
@@ -335,17 +466,18 @@ def process_tieuchi_4_5(
         "odaccount","acctcd","dracctno","drratio","adduser","updtuser",
         "expiredate","custnm","cif","xpcode","xpcodedt","remark","oldxpcode"
     ]
+    # ensure
     df_map = ensure_columns(df_map, need_cols)
     df_map = df_map[need_cols].copy()
     df_map["uploaddt"] = safe_to_datetime(df_map["uploaddt"])
     df_map["xpcodedt"] = safe_to_datetime(df_map["xpcodedt"])
     df_map["SO_NGAY_MO_THE"] = (df_map["xpcodedt"] - df_map["uploaddt"]).dt.days
     df_map["MO_DONG_TRONG_6_THANG"] = df_map.apply(
-        lambda r: "X" if (pd.notnull(r["SO_NGAY_MO_THE"]) and 0 <= r["SO_NGAY_MO_THE"] < 180 and pd.notnull(r["uploaddt"]) and r["uploaddt"] > pd.to_datetime("2025-06-30")) else "",
+        lambda r: "X" if (pd.notnull(r["SO_NGAY_MO_THE"]) and 0 <= r["SO_NGAY_MO_THE"] < 180 and r["uploaddt"] > pd.to_datetime("2025-06-30")) else "",
         axis=1
     )
-    df_map["xpcodedt"] = df_map["xpcodedt"].dt.strftime("%m%d%Y").fillna("")
-    df_map["uploaddt"] = df_map["uploaddt"].dt.strftime("%m%d%Y").fillna("")
+    df_map["xpcodedt"] = df_map["xpcodedt"].dt.strftime("%m%d%Y")
+    df_map["uploaddt"] = df_map["uploaddt"].dt.strftime("%m%d%Y")
 
     return df_42a, df_map
 
@@ -355,149 +487,132 @@ def process_tieuchi_4_5(
 # ---------------------------
 def run_dvkh_5_tieuchi():
     st.title("👥 DVKH — 5 tiêu chí (Ủy quyền, SMS/SCM, HDV, Mapping)")
+
     user = get_current_user() or {"username": "unknown"}
 
     tab1, tab2 = st.tabs(["Tiêu chí 1-3 (Ủy quyền + SMS/SCM)", "Tiêu chí 4-5 (42a & Mapping)"])
 
-    def extract_files_from_zip(uploaded_zip, exts=(".xls", ".xlsx")):
-        """Trả về list (filename, BytesIO) của các file có đuôi exts trong zip"""
-        out = []
-        try:
-            if hasattr(uploaded_zip, "seek"):
-                uploaded_zip.seek(0)
-            z = zipfile.ZipFile(uploaded_zip)
-            for name in z.namelist():
-                if name.lower().endswith(exts):
-                    out.append((name, io.BytesIO(z.read(name))))
-            return out
-        except Exception:
-            return []
-
-    def extract_sms_txt_from_zip(uploaded_zip_file):
-        """Trích xuất file .txt từ ZIP (trong bộ nhớ). Trả về BytesIO + filename"""
-        try:
-            if hasattr(uploaded_zip_file, "seek"):
-                uploaded_zip_file.seek(0)
-            z = zipfile.ZipFile(uploaded_zip_file)
-            for name in z.namelist():
-                if name.lower().endswith(".txt"):
-                    return io.BytesIO(z.read(name)), name
-            return None, None
-        except Exception:
-            return None, None
-
-    # ---- TAB 1: Tiêu chí 1-3 ----
     with tab1:
         st.header("A. Tiêu chí 1-3: Ủy quyền + SMS + SCM010")
-        st.info("Upload: CKH (nhiều), KKH (nhiều), MUC30 (xlsx), ZIP chứa Muc14_DKSMS.txt, Muc14_SCM010.xlsx")
+        st.info("Upload: CKH (nhiều), KKH (nhiều), MUC30, ZIP chứa Muc14_DKSMS.txt, SCM010.xlsx")
 
-        uploaded_ckh_zip = st.file_uploader("ZIP chứa HDV_CHITIET_CKH_* (zip chứa nhiều .xls/.xlsx)", type=["zip"], key="dvkh_ckh")
-        uploaded_kkh_zip = st.file_uploader("ZIP chứa HDV_CHITIET_KKH_* (zip chứa nhiều .xls/.xlsx)", type=["zip"], key="dvkh_kkh")
-        uploaded_muc30_file = st.file_uploader("MUC 30 (Muc30).xlsx", type=["xls", "xlsx"], key="dvkh_muc30")
-        uploaded_sms_zip = st.file_uploader("Muc14_DKSMS.zip (bên trong 1 file .txt lớn)", type=["zip"], key="dvkh_sms_zip")
-        uploaded_scm10_xlsx_file = st.file_uploader("Muc14_SCM010.xlsx", type=["xls", "xlsx"], key="dvkh_scm10")
+        uploaded_ckh_zip = st.file_uploader("HDV_CHITIET_CKH.zip (nhiều file Excel bên trong) - (hoặc upload list Excel)", type=["zip","xls","xlsx"], accept_multiple_files=False, key="dvkh_ckh_zip")
+        uploaded_kkh_zip = st.file_uploader("HDV_CHITIET_KKH.zip (nhiều file Excel bên trong) - (hoặc upload list Excel)", type=["zip","xls","xlsx"], accept_multiple_files=False, key="dvkh_kkh_zip")
+
+        # Hỗ trợ both: nếu user upload zip thì extract; nếu upload multiple excel (older UI) thì có thể thay đổi
+        uploaded_ckh_files = []
+        uploaded_kkh_files = []
+
+        # nếu upload zip cho CKH
+        if uploaded_ckh_zip and uploaded_ckh_zip.type == "application/x-zip-compressed" or (uploaded_ckh_zip and uploaded_ckh_zip.name.lower().endswith(".zip")):
+            ckh_list = extract_excel_from_zip_bytes(uploaded_ckh_zip)
+            uploaded_ckh_files = [ (name, buf) for name, buf in ckh_list ]
+        else:
+            # nếu user chọn một excel file (không zip), hỗ trợ upload nhiều bằng interface khác -> try to use as single Excel
+            if uploaded_ckh_zip and uploaded_ckh_zip.name.lower().endswith((".xls", ".xlsx")):
+                uploaded_ckh_files = [uploaded_ckh_zip]
+
+        if uploaded_kkh_zip and uploaded_kkh_zip.type == "application/x-zip-compressed" or (uploaded_kkh_zip and uploaded_kkh_zip.name.lower().endswith(".zip")):
+            kkh_list = extract_excel_from_zip_bytes(uploaded_kkh_zip)
+            uploaded_kkh_files = [ (name, buf) for name, buf in kkh_list ]
+        else:
+            if uploaded_kkh_zip and uploaded_kkh_zip.name.lower().endswith((".xls", ".xlsx")):
+                uploaded_kkh_files = [uploaded_kkh_zip]
+
+        uploaded_muc30_file = st.file_uploader("MUC 30 (Muc30) - single", type=["xls","xlsx"], key="dvkh_muc30")
+        uploaded_sms_zip = st.file_uploader("Muc14_DKSMS.zip (bên trong chứa 1 file .txt)", type=["zip"], key="dvkh_sms_zip")
+        uploaded_scm10_xlsx_file = st.file_uploader("Muc14_SCM010.xlsx", type=["xls","xlsx"], key="dvkh_scm10")
 
         if st.button("Chạy Tiêu chí 1-3"):
-            # checks
-            if not uploaded_ckh_zip or not uploaded_kkh_zip or not uploaded_muc30_file or not uploaded_sms_zip or not uploaded_scm10_xlsx_file:
-                st.error("Vui lòng upload đầy đủ: CKH.zip, KKH.zip, MUC30.xlsx, SMS.zip, SCM010.xlsx")
+            # validate
+            if not uploaded_muc30_file or not uploaded_scm10_xlsx_file or not uploaded_sms_zip or (not uploaded_ckh_files) or (not uploaded_kkh_files):
+                st.error("Vui lòng upload đủ: CKH (zip hoặc excel), KKH (zip hoặc excel), MUC30, ZIP chứa Muc14_DKSMS.txt, Muc14_SCM010.xlsx")
                 audit_log("run_tieuchi_1_3_failed", "missing files", user)
-                st.stop()
+            else:
+                # giải nén SMS txt
+                sms_io, sms_name = extract_text_from_zip_bytes(uploaded_sms_zip)
+                if sms_io is None:
+                    st.error("Không tìm thấy file .txt trong ZIP SMS. Vui lòng kiểm tra ZIP.")
+                    audit_log("run_tieuchi_1_3_failed", "sms txt not found in zip", user)
+                else:
+                    try:
+                        audit_log("run_tieuchi_1_3_start", f"CKH_files:{len(uploaded_ckh_files)} KKH_files:{len(uploaded_kkh_files)}", user)
+                        merged, df_tc3 = process_uyquyen_sms_scm(
+                            uploaded_ckh_files,
+                            uploaded_kkh_files,
+                            uploaded_muc30_file,
+                            sms_io,
+                            uploaded_scm10_xlsx_file
+                        )
+                        st.success("Xử lý xong Tiêu chí 1-3")
+                        st.subheader("Preview Tiêu chí 3")
+                        st.dataframe(df_tc3.head(200), use_container_width=True)
 
-            # extract excel files from ckhs/kkhs zips
-            ckh_files = extract_files_from_zip(uploaded_ckh_zip, exts=(".xls", ".xlsx"))
-            kkh_files = extract_files_from_zip(uploaded_kkh_zip, exts=(".xls", ".xlsx"))
-            if not ckh_files:
-                st.error("ZIP CKH không chứa file Excel (.xls/.xlsx).")
-                audit_log("run_tieuchi_1_3_failed", "ckh zip empty", user)
-                st.stop()
-            if not kkh_files:
-                st.error("ZIP KKH không chứa file Excel (.xls/.xlsx).")
-                audit_log("run_tieuchi_1_3_failed", "kkh zip empty", user)
-                st.stop()
+                        out_bytes = to_excel_bytes({
+                            "UyQuyen": merged,
+                            "UyQuyen_TC3": df_tc3
+                        })
+                        st.download_button("📥 Tải Excel Tiêu chí 1-3", data=out_bytes, file_name="DVKH_TC1_3.xlsx", mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
+                        audit_log("run_tieuchi_1_3_success", f"rows:{len(df_tc3)}", user)
+                    except Exception as e:
+                        st.error("Đã xảy ra lỗi trong quá trình xử lý Tiêu chí 1-3.")
+                        st.exception(e)
+                        audit_log("run_tieuchi_1_3_error", str(e), user)
 
-            # create list of BytesIO for read_excel
-            ckh_streams = [f[1] for f in ckh_files]
-            kkh_streams = [f[1] for f in kkh_files]
-
-            # extract sms txt from zip
-            sms_txt_bytes, sms_name = extract_sms_txt_from_zip(uploaded_sms_zip)
-            if sms_txt_bytes is None:
-                st.error("Không tìm thấy file .txt trong ZIP SMS.")
-                audit_log("run_tieuchi_1_3_failed", "sms txt not found", user)
-                st.stop()
-
-            # run processing
-            try:
-                audit_log("run_tieuchi_1_3_start", f"CKH_files={len(ckh_streams)} KKH_files={len(kkh_streams)} sms={sms_name}", user)
-                merged, df_tc3 = process_uyquyen_sms_scm(
-                    uploaded_ckh_files=ckh_streams,
-                    uploaded_kkh_files=kkh_streams,
-                    uploaded_muc30_file=uploaded_muc30_file,
-                    uploaded_sms_txt_file=sms_txt_bytes,
-                    uploaded_scm10_xlsx_file=uploaded_scm10_xlsx_file
-                )
-                st.success("Xử lý xong Tiêu chí 1-3")
-                st.subheader("Kết quả — preview (Tiêu chí 3)")
-                st.dataframe(df_tc3.head(200), use_container_width=True)
-
-                out_bytes = to_excel_bytes({
-                    "UyQuyen": merged,
-                    "UyQuyen_TC3": df_tc3
-                })
-                st.download_button("📥 Tải Excel Tiêu chí 1-3", data=out_bytes, file_name="DVKH_TC1_3.xlsx", mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
-                audit_log("run_tieuchi_1_3_success", f"rows:{len(df_tc3)}", user)
-            except Exception as e:
-                st.error("Đã xảy ra lỗi trong quá trình xử lý Tiêu chí 1-3.")
-                st.exception(e)
-                audit_log("run_tieuchi_1_3_error", str(e), user)
-
-    # ---- TAB 2: Tiêu chí 4-5 ----
+    # TAB 2
     with tab2:
-        st.header("B. Tiêu chí 4 & 5 (42a & Mapping)")
-        st.info("Upload files: HDV_CHITIET_KKH (multiple .xls/.xlsx), BC_LAY_CHARGELEVELCODE_THEO_KHCN, 10_Danh_sach_nhan_su, DS_nghi_viec, Mapping_1405.xlsx")
-        files_42a_upload = st.file_uploader("HDV_CHITIET_KKH_*.xls (multiple)", type=["xls", "xlsx"], accept_multiple_files=True, key="dvkh_42a")
-        file_42b_upload = st.file_uploader("BC_LAY_CHARGELEVELCODE_THEO_KHCN.xlsx", type=["xls", "xlsx"], key="dvkh_42b")
-        file_42c_upload = st.file_uploader("10_Danh_sach_nhan_su_*.xlsx", type=["xls", "xlsx"], key="dvkh_42c")
-        file_42d_upload = st.file_uploader("DS_nhan_su_nghi_viec_*.xlsx", type=["xls", "xlsx"], key="dvkh_42d")
-        file_mapping_upload = st.file_uploader("Mapping_1405.xlsx", type=["xls", "xlsx"], key="dvkh_map")
+        st.header("B. Tiêu chí 4 & 5 (42a / Mapping)")
+        st.info("Upload: HDV_CHITIET_KKH (nhiều file .xls/.xlsx), BC_LAY_CHARGELEVELCODE..., 10_Danh sach nhan su..., DS nghi viec..., Mapping_1405.xlsx")
+        files_42a_upload = st.file_uploader("HDV_CHITIET_KKH_*.xls (multiple) OR upload zip containing many Excel", type=["zip","xls","xlsx"], accept_multiple_files=False, key="dvkh_tab2_42a")
+        file_42b_upload = st.file_uploader("BC_LAY_CHARGELEVELCODE_THEO_KHCN (excel)", type=["xls","xlsx"], key="dvkh_tab2_42b")
+        file_42c_upload = st.file_uploader("10_Danh sach nhan su_T*.xlsx", type=["xls","xlsx"], key="dvkh_tab2_42c")
+        file_42d_upload = st.file_uploader("2.DS..._nghi_viec.xlsx", type=["xls","xlsx"], key="dvkh_tab2_42d")
+        file_mapping_upload = st.file_uploader("Mapping_1405.xlsx", type=["xls","xlsx"], key="dvkh_tab2_map")
         chi_nhanh = st.text_input("Nhập tên chi nhánh hoặc mã SOL để lọc (VD: HANOI hoặc 1405)").strip().upper()
 
         if st.button("Chạy Tiêu chí 4-5"):
             if not (files_42a_upload and file_42b_upload and file_42c_upload and file_42d_upload and file_mapping_upload and chi_nhanh):
-                st.error("Vui lòng tải đầy đủ file và nhập chi nhánh để chạy Tiêu chí 4-5.")
+                st.error("Vui lòng tải đủ các file và nhập chi_nhanh để chạy Tiêu chí 4-5.")
                 audit_log("run_tieuchi_4_5_failed", "missing inputs", user)
-                st.stop()
-            try:
-                audit_log("run_tieuchi_4_5_start", f"chi_nhanh={chi_nhanh}", user)
-                df_42a_processed, df_mapping_final = process_tieuchi_4_5(
-                    files_42a_upload=files_42a_upload,
-                    file_42b_upload=file_42b_upload,
-                    file_42c_upload=file_42c_upload,
-                    file_42d_upload=file_42d_upload,
-                    file_mapping_upload=file_mapping_upload,
-                    chi_nhanh=chi_nhanh
-                )
+            else:
+                try:
+                    # Nếu files_42a_upload là zip -> extract
+                    files_42a_list = []
+                    if files_42a_upload.name.lower().endswith(".zip"):
+                        ex = extract_excel_from_zip_bytes(files_42a_upload)
+                        files_42a_list = [(name, buf) for name, buf in ex]
+                    else:
+                        # nếu là 1 excel: dùng trực tiếp
+                        files_42a_list = [files_42a_upload]
 
-                st.success("Xử lý xong Tiêu chí 4-5")
-                st.subheader("Preview Tiêu chí 4 (42a)")
-                st.dataframe(df_42a_processed.head(200), use_container_width=True)
-                st.subheader("Preview Tiêu chí 5 (Mapping)")
-                st.dataframe(df_mapping_final.head(200), use_container_width=True)
+                    audit_log("run_tieuchi_4_5_start", f"chi_nhanh={chi_nhanh} files_42a={len(files_42a_list)}", user)
+                    df_42a_final, df_mapping_final = process_tieuchi_4_5(
+                        files_42a_upload=files_42a_list,
+                        file_42b_upload=file_42b_upload,
+                        file_42c_upload=file_42c_upload,
+                        file_42d_upload=file_42d_upload,
+                        file_mapping_upload=file_mapping_upload,
+                        chi_nhanh=chi_nhanh
+                    )
 
-                # xuất Excel 2 sheet
-                out_bytes = to_excel_bytes({
-                    "Tieu_chi_4": df_42a_processed,
-                    "Tieu_chi_5": df_mapping_final
-                })
-                st.download_button("📥 Tải Excel Tiêu chí 4-5", data=out_bytes, file_name="DVKH_TC4_5.xlsx", mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
-                audit_log("run_tieuchi_4_5_success", f"rows4:{len(df_42a_processed)} rows5:{len(df_mapping_final)}", user)
-            except Exception as e:
-                st.error("Đã xảy ra lỗi trong quá trình xử lý Tiêu chí 4-5.")
-                st.exception(e)
-                audit_log("run_tieuchi_4_5_error", str(e), user)
+                    st.success("Xử lý xong Tiêu chí 4-5")
+                    st.subheader("Preview Tiêu chí 4 (42a)")
+                    st.dataframe(df_42a_final.head(200), use_container_width=True)
+                    st.subheader("Preview Tiêu chí 5 (Mapping)")
+                    st.dataframe(df_mapping_final.head(200), use_container_width=True)
 
-    # ---- Audit viewer & quick exports ----
+                    out_bytes = to_excel_bytes({
+                        "Tieu_chi_4": df_42a_final,
+                        "Tieu_chi_5": df_mapping_final
+                    })
+                    st.download_button("📥 Tải Excel Tiêu chí 4-5", data=out_bytes, file_name="DVKH_TC4_5.xlsx", mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
+                    audit_log("run_tieuchi_4_5_success", f"rows4:{len(df_42a_final)} rows5:{len(df_mapping_final)}", user)
+                except Exception as e:
+                    st.error("Đã xảy ra lỗi trong quá trình xử lý Tiêu chí 4-5.")
+                    st.exception(e)
+                    audit_log("run_tieuchi_4_5_error", str(e), user)
+
+    # Audit viewer
     st.markdown("---")
     st.header("Audit & Logs")
     st.write("Nhật ký hoạt động DVKH (local file):")
@@ -514,7 +629,8 @@ def run_dvkh_5_tieuchi():
         st.info("Chưa có log hoạt động (file dvkh_audit.csv chưa tồn tại).")
 
     st.markdown("---")
-    st.info("Module DVKH — hoàn tất. Liên hệ admin khi cần thêm cột/rules.")
+    st.info("Module DVKH — hoàn tất. Liên hệ admin khi cần thêm rule / cột bổ sung.")
+
 
 # # module/DVKH.py
 # """

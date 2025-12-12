@@ -357,7 +357,9 @@ def run_dvkh_5_tieuchi():
     #                 audit_log("run_tieuchi_1_3_error", str(e), user)
 
     
-        def extract_sms_txt_from_zip(uploaded_zip_file):
+
+
+    def extract_sms_txt_from_zip(uploaded_zip_file):
         """Trích xuất file Muc14_DKSMS.txt từ ZIP (trong bộ nhớ)."""
         try:
             z = zipfile.ZipFile(uploaded_zip_file)
@@ -443,6 +445,7 @@ def run_dvkh_5_tieuchi():
                     st.error("Đã xảy ra lỗi trong quá trình xử lý Tiêu chí 1-3.")
                     st.exception(e)
                     audit_log("run_tieuchi_1_3_error", str(e), user)
+
 
       
     # ---- TAB 2 ----

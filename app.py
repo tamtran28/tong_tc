@@ -13,6 +13,7 @@ seed_users()
 from log.user_activity_view import view_my_activity
 
 # ==== MODULE NGHIỆP VỤ ====
+from module.error_utils import run_with_user_error
 from module.phoi_the import run_phoi_the
 from module.chuyen_tien import run_chuyen_tien
 from module.to_khai_hq import run_to_khai_hq
@@ -130,39 +131,39 @@ st.title("📊 CHƯƠNG TRÌNH CHẠY TIÊU CHÍ CHỌN MẪU – KTNB")
 
 if menu == "📘 Phôi Thẻ – GTCG":
     colored_header("📘 PHÔI THẺ – GTCG")
-    run_phoi_the()
+    run_with_user_error(run_phoi_the, "xử lý Phôi Thẻ – GTCG")
 
 elif menu == "💸 Mục 09 – Chuyển tiền":
     colored_header("💸 CHUYỂN TIỀN")
-    run_chuyen_tien()
+    run_with_user_error(run_chuyen_tien, "xử lý Mục 09 – Chuyển tiền")
 
 elif menu == "📑 Tờ khai Hải quan":
     colored_header("📑 TỜ KHAI HẢI QUAN")
-    run_to_khai_hq()
+    run_with_user_error(run_to_khai_hq, "xử lý Tờ khai Hải quan")
 
 elif menu == "🏦 Tiêu chí tín dụng CRM4–32":
     colored_header("🏦 TÍN DỤNG CRM4 – CRM32")
-    run_tin_dung()
+    run_with_user_error(run_tin_dung, "xử lý Tiêu chí tín dụng CRM4–32")
 
 elif menu == "💼 HDV (TC1 – TC3)":
     colored_header("💼 HDV – TC1 đến TC3")
-    run_hdv()
+    run_with_user_error(run_hdv, "xử lý HDV (TC1 – TC3)")
 
 elif menu == "🌏 Ngoại tệ & Vàng (TC5 – TC6)":
     colored_header("🌏 NGOẠI TỆ & VÀNG")
-    run_ngoai_te_vang()
+    run_with_user_error(run_ngoai_te_vang, "xử lý Ngoại tệ & Vàng")
 
 elif menu == "👥 DVKH (5 tiêu chí)":
     colored_header("👥 DVKH – 5 TIÊU CHÍ")
-    run_dvkh_5_tieuchi()
+    run_with_user_error(run_dvkh_5_tieuchi, "xử lý DVKH (5 tiêu chí)")
 
 elif menu == "💳 Tiêu chí thẻ":
     colored_header("💳 TIÊU CHÍ THẺ")
-    run_module_the()
+    run_with_user_error(run_module_the, "xử lý Tiêu chí Thẻ")
 
 elif menu == "💳 Tiêu chí máy pos":
     if not require_role(user, ["admin", "pos","user"]):
         st.error("🚫 Bạn không có quyền truy cập mục POS")
         st.stop()
     colored_header("💳 TIÊU CHÍ MÁY POS")
-    run_module_pos()
+    run_with_user_error(run_module_pos, "xử lý Tiêu chí máy POS")

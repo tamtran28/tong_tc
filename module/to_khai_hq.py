@@ -9,6 +9,8 @@ import io
 import re
 from datetime import datetime
 
+from module.error_utils import ensure_required_columns, render_error, UserFacingError
+
 
 # ============================================================
 # 🔹 HÀM TỰ NHẬN DIỆN & CHUYỂN ĐỊNH DẠNG NGÀY
@@ -16,6 +18,8 @@ from datetime import datetime
 
 def smart_date_parse(series):
     """Tự động nhận diện định dạng dd-mm-yyyy hoặc mm-dd-yyyy"""
+    if series is None:
+        raise UserFacingError("Thiếu cột ngày bắt buộc trong file TKHQ.")
     series = series.astype(str).str.strip()
 
     # Heuristic: nếu xuất hiện ngày >12 => dd-mm-yyyy
@@ -106,24 +110,39 @@ def run_to_khai_hq():
     if st.button("🚀 Bắt đầu xử lý", type="primary"):
         with st.spinner("Đang xử lý dữ liệu..."):
 
-            df_raw = pd.read_excel(file)
-            ngay_kiem_toan_pd = pd.to_datetime(audit_date)
+            try:
+                df_raw = pd.read_excel(file)
+                ensure_required_columns(
+                    df_raw,
+                    [
+                        "DECLARATION_DUE_DATE",
+                        "DECLARATION_RECEIVED_DATE",
+                    ],
+                )
 
-            df_processed = process_tkhq_data(df_raw, ngay_kiem_toan_pd)
+                ngay_kiem_toan_pd = pd.to_datetime(audit_date)
+                df_processed = process_tkhq_data(df_raw, ngay_kiem_toan_pd)
 
-            st.success("✅ Xử lý hoàn tất!")
+                st.success("✅ Xử lý hoàn tất!")
 
-            st.subheader("📋 Kết quả phân tích")
-            st.dataframe(df_processed)
+                st.subheader("📋 Kết quả phân tích")
+                st.dataframe(df_processed)
 
-            # Xuất Excel
-            output = io.BytesIO()
-            with pd.ExcelWriter(output, engine="openpyxl", date_format="DD-MM-YYYY") as writer:
-                df_processed.to_excel(writer, index=False, sheet_name="ket_qua_TKHQ")
+                # Xuất Excel
+                output = io.BytesIO()
+                with pd.ExcelWriter(output, engine="openpyxl", date_format="DD-MM-YYYY") as writer:
+                    df_processed.to_excel(writer, index=False, sheet_name="ket_qua_TKHQ")
 
-            st.download_button(
-                "📥 Tải xuống kết quả Excel",
-                output.getvalue(),
-                file_name=f"ket_qua_TKHQ_{audit_date.strftime('%d%m%Y')}.xlsx",
-                mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-            )
+                st.download_button(
+                    "📥 Tải xuống kết quả Excel",
+                    output.getvalue(),
+                    file_name=f"ket_qua_TKHQ_{audit_date.strftime('%d%m%Y')}.xlsx",
+                    mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+                )
+            except UserFacingError as exc:
+                render_error(str(exc))
+            except Exception as exc:
+                render_error(
+                    "Không thể xử lý file TKHQ. Vui lòng kiểm tra định dạng ngày, tên cột và thử lại.",
+                    exc,
+                )

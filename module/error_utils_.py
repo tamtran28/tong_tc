@@ -7,16 +7,20 @@ import streamlit as st
 class UserFacingError(Exception):
     """Lỗi dùng để hiển thị thông điệp thân thiện cho người dùng cuối."""
 
+
 def render_error(message: str, exc: Optional[Exception] = None) -> None:
     """Hiển thị lỗi thân thiện và (tuỳ chọn) chi tiết kỹ thuật trong expander."""
     st.error(message)
     if exc is not None:
         with st.expander("Chi tiết kỹ thuật (dành cho đội phát triển)"):
-            st.code("".join(traceback.format_exception(exc)), language="text")
+            st.code(
+                "".join(traceback.format_exception(type(exc), exc, exc.__traceback__)),
+                language="text",
+            )
+
 
 def _should_reraise(exc: Exception) -> bool:
     """Trả về True nếu đó là exception đặc biệt của Streamlit cần propagate."""
-
     try:
         from streamlit.runtime.scriptrunner import RerunException, StopException
 
@@ -43,7 +47,6 @@ def ensure_required_columns(df, required: Iterable[str]) -> None:
 
 def normalize_columns(df):
     """Chuẩn hoá tên cột: bỏ khoảng trắng, viết hoa để giảm xung đột khi nhập file."""
-
     df.columns = df.columns.str.strip().str.upper()
     return df
 
@@ -58,7 +61,6 @@ def run_with_user_error(fn: Callable[[], None], context: str) -> None:
     context: str
         Mô tả ngắn gọn cho hành động, dùng trong thông báo lỗi chung.
     """
-
     try:
         fn()
     except UserFacingError as exc:

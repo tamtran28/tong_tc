@@ -4,6 +4,8 @@
 
 import streamlit as st
 import pandas as pd
+
+from module.error_utils import UserFacingError, _should_reraise
 import numpy as np
 from datetime import datetime, date
 from dateutil.relativedelta import relativedelta
@@ -178,6 +180,20 @@ def process_pos_only(file_before_2305, file_after_2305, file_6_2b,
 # MODULE STREAMLIT
 # =========================================================
 def run_module_pos():
+    try:
+        _run_module_pos()
+    except UserFacingError:
+        raise
+    except Exception as exc:
+        if _should_reraise(exc):
+            raise
+
+        raise UserFacingError(
+            "Đã xảy ra lỗi khi xử lý Tiêu chí máy POS. Vui lòng kiểm tra file đầu vào và thử lại."
+        ) from exc
+
+
+def _run_module_pos():
     # user = require_role(["admin", "pos"]) 
     st.title("🏧 TIÊU CHÍ POS – Mục 6, 7, 8")
 

@@ -6,6 +6,8 @@ import numpy as np
 import pandas as pd
 import streamlit as st
 
+from module.error_utils import UserFacingError, _should_reraise
+
 
 # =========================================================
 # HÀM PHỤ – XUẤT EXCEL RA BYTES
@@ -603,6 +605,20 @@ def process_the(
 # HÀM PUBLIC – GỌI TỪ app.py
 # =========================================================
 def run_module_the():
+    try:
+        _run_module_the()
+    except UserFacingError:
+        raise
+    except Exception as exc:
+        if _should_reraise(exc):
+            raise
+
+        raise UserFacingError(
+            "Đã xảy ra lỗi khi xử lý Tiêu chí thẻ. Vui lòng kiểm tra file đầu vào."
+        ) from exc
+
+
+def _run_module_the():
     st.title("📊 TIÊU CHÍ THẺ – 1600 (Mục 1.3.2)")
 
     st.markdown(

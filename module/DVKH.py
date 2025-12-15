@@ -21,6 +21,8 @@ import os
 from datetime import datetime
 from typing import List, Optional, Tuple
 
+from module.error_utils import UserFacingError, _should_reraise
+
 # Cố gắng lấy user hiện tại từ hệ thống auth (nếu project của bạn có)
 try:
     from db.auth_jwt import get_current_user
@@ -486,6 +488,20 @@ def process_tieuchi_4_5(
 # STREAMLIT UI PUBLIC FUNCTION
 # ---------------------------
 def run_dvkh_5_tieuchi():
+    try:
+        _run_dvkh_5_tieuchi()
+    except UserFacingError:
+        raise
+    except Exception as exc:
+        if _should_reraise(exc):
+            raise
+
+        raise UserFacingError(
+            "Đã xảy ra lỗi khi xử lý DVKH. Vui lòng kiểm tra các tệp CKH/KKH, SMS và cấu hình đầu vào."
+        ) from exc
+
+
+def _run_dvkh_5_tieuchi():
     st.title("👥 DVKH — 5 tiêu chí (Ủy quyền, SMS/SCM, HDV, Mapping)")
 
     user = get_current_user() or {"username": "unknown"}

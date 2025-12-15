@@ -43,6 +43,13 @@ def ensure_required_columns(df, required: Iterable[str]) -> None:
         )
 
 
+def normalize_columns(df):
+    """Chuẩn hoá tên cột: bỏ khoảng trắng, viết hoa để giảm xung đột khi nhập file."""
+
+    df.columns = df.columns.str.strip().str.upper()
+    return df
+
+
 def run_with_user_error(fn: Callable[[], None], context: str) -> None:
     """Wrapper để hiển thị thông báo lỗi thân thiện cho toàn bộ UI chính.
 

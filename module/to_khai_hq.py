@@ -1,8 +1,3 @@
-# ============================================================
-# module/to_khai_hq.py
-# PHÂN TÍCH TỜ KHAI HẢI QUAN (TKHQ)
-# ============================================================
-
 import streamlit as st
 import pandas as pd
 import io

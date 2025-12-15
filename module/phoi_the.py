@@ -3,11 +3,27 @@ import pandas as pd
 import numpy as np
 from io import BytesIO
 
+from module.error_utils import UserFacingError, _should_reraise
+
 # ============================================================
 #     MODULE PHÔI THẺ – GTCG
 # ============================================================
 
 def run_phoi_the():
+    try:
+        _run_phoi_the()
+    except UserFacingError:
+        raise
+    except Exception as exc:
+        if _should_reraise(exc):
+            raise
+
+        raise UserFacingError(
+            "Đã xảy ra lỗi khi xử lý Phôi Thẻ – GTCG. Vui lòng kiểm tra mã SOL và tệp tải lên."
+        ) from exc
+
+
+def _run_phoi_the():
     st.header("📘 Xử lý Phôi Thẻ – GTCG")
 
     sol_kiem_toan = st.text_input("Nhập mã SOL kiểm toán (ví dụ: 1002):", "")

@@ -7,14 +7,12 @@ import streamlit as st
 class UserFacingError(Exception):
     """Lỗi dùng để hiển thị thông điệp thân thiện cho người dùng cuối."""
 
-
 def render_error(message: str, exc: Optional[Exception] = None) -> None:
     """Hiển thị lỗi thân thiện và (tuỳ chọn) chi tiết kỹ thuật trong expander."""
     st.error(message)
     if exc is not None:
         with st.expander("Chi tiết kỹ thuật (dành cho đội phát triển)"):
             st.code("".join(traceback.format_exception(exc)), language="text")
-
 
 def _should_reraise(exc: Exception) -> bool:
     """Trả về True nếu đó là exception đặc biệt của Streamlit cần propagate."""

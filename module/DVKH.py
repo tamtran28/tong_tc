@@ -383,9 +383,6 @@ def process_uyquyen_sms_scm(
     return merged, df_tc3
 
 
-# ---------------------------
-# XỬ LÝ TIÊU CHÍ 4-5 (42a + Mapping)
-# ---------------------------
 def process_tieuchi_4_5(
     files_42a_upload: List,
     file_42b_upload,
@@ -395,10 +392,15 @@ def process_tieuchi_4_5(
     chi_nhanh: str
 ):
     """
-    Trả về: df_42a_final, df_mapping_final
-    files_42a_upload: list of UploadedFile / list of (name, BytesIO)
+    Trả về:
+        df_42a_final, df_mapping_final
+
+    files_42a_upload: list[UploadedFile | (name, BytesIO)]
     """
-    # 1) GHÉP 42A
+
+    # =====================================================
+    # 1) GHÉP + LỌC TIÊU CHÍ 4.2.a
+    # =====================================================
     frames = []
     for f in files_42a_upload:
         try:
@@ -408,81 +410,154 @@ def process_tieuchi_4_5(
                 frames.append(read_excel_file_bytesio(f[1]))
             else:
                 raise
-    df_42a = pd.concat(frames, ignore_index=True) if frames else pd.DataFrame()
-    if df_42a.empty:
+
+    if not frames:
         return pd.DataFrame(), pd.DataFrame()
 
-    # filter chi nhánh
+    df_42a = pd.concat(frames, ignore_index=True)
+
     if "BRCD" in df_42a.columns and chi_nhanh:
-        df_42a = df_42a[df_42a["BRCD"].astype(str).str.upper().str.contains(chi_nhanh)]
-    # ensure columns
+        df_42a = df_42a[
+            df_42a["BRCD"].astype(str).str.upper().str.contains(chi_nhanh)
+        ]
+
     cols_42a = [
         "BRCD", "DEPTCD", "CUST_TYPE", "CUSTSEQ", "NMLOC", "BIRTH_DAY",
         "IDXACNO", "SCHM_NAME", "CCYCD", "CURBAL_VN",
         "OPNDT_FIRST", "OPNDT_EFFECT"
     ]
-    df_42a = ensure_columns(df_42a, cols_42a)
-    df_42a = df_42a[cols_42a]
+    df_42a = ensure_columns(df_42a, cols_42a)[cols_42a]
 
-    # Keep KHCN
-    if "CUST_TYPE" in df_42a.columns:
-        df_42a = df_42a[df_42a["CUST_TYPE"].astype(str).str.upper() == "KHCN"]
+    # Chỉ giữ KHCN
+    df_42a = df_42a[
+        df_42a["CUST_TYPE"].astype(str).str.upper() == "KHCN"
+    ]
 
-    # exclude by SCHM_NAME
+    # Loại TK không hợp lệ
     exclude_keywords = ["KY QUY", "GIAI NGAN", "CHI LUONG", "TKTT THE", "TRUNG GIAN"]
-    if "SCHM_NAME" in df_42a.columns:
-        df_42a = df_42a[~df_42a["SCHM_NAME"].astype(str).str.upper().str.contains("|".join(exclude_keywords), na=False)]
+    df_42a = df_42a[
+        ~df_42a["SCHM_NAME"]
+        .astype(str)
+        .str.upper()
+        .str.contains("|".join(exclude_keywords), na=False)
+    ]
 
-    # 2) 42B - chargelevel
+    # =====================================================
+    # 2) TIÊU CHÍ 4.2.b – CHARGE LEVEL
+    # =====================================================
     df_42b = read_excel_file_bytesio(file_42b_upload)
-    df_42b = ensure_columns(df_42b, ["MACIF", "STKKH", "CHARGELEVELCODE_CIF", "CHARGELEVELCODE_TK"])
+    df_42b = ensure_columns(
+        df_42b,
+        ["MACIF", "STKKH", "CHARGELEVELCODE_CIF", "CHARGELEVELCODE_TK"]
+    )
 
     df_42a["CUSTSEQ"] = df_42a["CUSTSEQ"].astype(str)
+    df_42a["IDXACNO"] = df_42a["IDXACNO"].astype(str)
     df_42b["MACIF"] = df_42b["MACIF"].astype(str)
     df_42b["STKKH"] = df_42b["STKKH"].astype(str)
 
-    df_42a = df_42a.merge(df_42b.drop_duplicates("MACIF")[["MACIF", "CHARGELEVELCODE_CIF"]],
-                          left_on="CUSTSEQ", right_on="MACIF", how="left").drop(columns=["MACIF"], errors="ignore")
-    df_42a.rename(columns={"CHARGELEVELCODE_CIF": "CHARGELEVELCODE_CUA_CIF"}, inplace=True)
+    # Merge theo CIF
+    df_42a = df_42a.merge(
+        df_42b.drop_duplicates("MACIF")[["MACIF", "CHARGELEVELCODE_CIF"]],
+        left_on="CUSTSEQ",
+        right_on="MACIF",
+        how="left"
+    )
+    df_42a.rename(
+        columns={"CHARGELEVELCODE_CIF": "CHARGELEVELCODE_CUA_CIF"},
+        inplace=True
+    )
+    df_42a.drop(columns="MACIF", inplace=True, errors="ignore")
 
-    df_42a = df_42a.merge(df_42b.drop_duplicates("STKKH")[["STKKH", "CHARGELEVELCODE_TK"]],
-                          left_on="IDXACNO", right_on="STKKH", how="left").drop(columns=["STKKH"], errors="ignore")
-    df_42a.rename(columns={"CHARGELEVELCODE_TK": "CHARGELEVELCODE_CUA_TK"}, inplace=True)
+    # Merge theo TK
+    df_42a = df_42a.merge(
+        df_42b.drop_duplicates("STKKH")[["STKKH", "CHARGELEVELCODE_TK"]],
+        left_on="IDXACNO",
+        right_on="STKKH",
+        how="left"
+    )
+    df_42a.rename(
+        columns={"CHARGELEVELCODE_TK": "CHARGELEVELCODE_CUA_TK"},
+        inplace=True
+    )
+    df_42a.drop(columns="STKKH", inplace=True, errors="ignore")
 
-    df_42a["TK_GAN_CODE_UU_DAI_CBNV"] = np.where(df_42a.get("CHARGELEVELCODE_CUA_TK", "") == "NVEIB", "X", "")
+    df_42a["TK_GAN_CODE_UU_DAI_CBNV"] = np.where(
+        df_42a["CHARGELEVELCODE_CUA_TK"] == "NVEIB", "X", ""
+    )
 
-    # 3) nhân sự nghỉ việc
+    # =====================================================
+    # 3) TIÊU CHÍ 4.2.c – DANH SÁCH NHÂN SỰ
+    # 👉 GIỮ CỘT "Mã số CIF"
+    # =====================================================
+    df_42c = read_excel_file_bytesio(file_42c_upload)
+    df_42c = ensure_columns(df_42c, ["Mã số CIF", "Mã NV"])
+
+    df_42a = df_42a.merge(
+        df_42c[["Mã số CIF", "Mã NV"]],
+        left_on="CUSTSEQ",
+        right_on="Mã số CIF",
+        how="left"
+    )
+    # KHÔNG DROP "Mã số CIF"
+
+    # =====================================================
+    # 4) TIÊU CHÍ 4.2.d – NHÂN SỰ NGHỈ VIỆC
+    # =====================================================
     df_42d = read_excel_file_bytesio(file_42d_upload)
     df_42d = ensure_columns(df_42d, ["CIF", "Ngày thôi việc"])
-    df_42a = df_42a.merge(df_42d[["CIF", "Ngày thôi việc"]], left_on="CUSTSEQ", right_on="CIF", how="left")
-    df_42a["CBNV_NGHI_VIEC"] = np.where(df_42a["CIF"].notna(), "X", "")
-    df_42a.rename(columns={"Ngày thôi việc": "NGAY_NGHI_VIEC"}, inplace=True)
-    df_42a["NGAY_NGHI_VIEC"] = safe_to_datetime(df_42a["NGAY_NGHI_VIEC"]).dt.strftime("%m/%d/%Y")
-    df_42a.drop(columns=["CIF"], inplace=True, errors="ignore")
 
-    # 4) Mapping (tiêu chí 5)
+    df_42a = df_42a.merge(
+        df_42d[["CIF", "Ngày thôi việc"]],
+        left_on="CUSTSEQ",
+        right_on="CIF",
+        how="left"
+    )
+
+    df_42a["CBNV_NGHI_VIEC"] = np.where(df_42a["CIF"].notna(), "X", "")
+    df_42a.rename(
+        columns={"Ngày thôi việc": "NGAY_NGHI_VIEC"},
+        inplace=True
+    )
+    df_42a["NGAY_NGHI_VIEC"] = (
+        safe_to_datetime(df_42a["NGAY_NGHI_VIEC"])
+        .dt.strftime("%m/%d/%Y")
+    )
+    df_42a.drop(columns="CIF", inplace=True, errors="ignore")
+
+    # =====================================================
+    # 5) TIÊU CHÍ 5 – MAPPING THẺ
+    # =====================================================
     df_map = read_excel_file_bytesio(file_mapping_upload)
     df_map.columns = df_map.columns.str.lower()
+
     need_cols = [
-        "brcd","semaacount","cardnbr","token","relation","uploaddt",
-        "odaccount","acctcd","dracctno","drratio","adduser","updtuser",
-        "expiredate","custnm","cif","xpcode","xpcodedt","remark","oldxpcode"
+        "brcd", "semaacount", "cardnbr", "token", "relation", "uploaddt",
+        "odaccount", "acctcd", "dracctno", "drratio", "adduser", "updtuser",
+        "expiredate", "custnm", "cif", "xpcode", "xpcodedt", "remark", "oldxpcode"
     ]
-    # ensure
-    df_map = ensure_columns(df_map, need_cols)
-    df_map = df_map[need_cols].copy()
+    df_map = ensure_columns(df_map, need_cols)[need_cols]
+
     df_map["uploaddt"] = safe_to_datetime(df_map["uploaddt"])
     df_map["xpcodedt"] = safe_to_datetime(df_map["xpcodedt"])
-    df_map["SO_NGAY_MO_THE"] = (df_map["xpcodedt"] - df_map["uploaddt"]).dt.days
+
+    df_map["SO_NGAY_MO_THE"] = (
+        df_map["xpcodedt"] - df_map["uploaddt"]
+    ).dt.days
+
     df_map["MO_DONG_TRONG_6_THANG"] = df_map.apply(
-        lambda r: "X" if (pd.notnull(r["SO_NGAY_MO_THE"]) and 0 <= r["SO_NGAY_MO_THE"] < 180 and r["uploaddt"] > pd.to_datetime("2025-06-30")) else "",
+        lambda r: "X"
+        if pd.notnull(r["SO_NGAY_MO_THE"])
+           and 0 <= r["SO_NGAY_MO_THE"] < 180
+           and r["uploaddt"] > pd.to_datetime("2025-06-30")
+        else "",
         axis=1
     )
-    df_map["xpcodedt"] = df_map["xpcodedt"].dt.strftime("%m%d%Y")
-    df_map["uploaddt"] = df_map["uploaddt"].dt.strftime("%m%d%Y")
+
+    df_map["xpcodedt"] = df_map["xpcodedt"].dt.strftime("%m/%d/%Y")
+    df_map["uploaddt"] = df_map["uploaddt"].dt.strftime("%m/%d/%Y")
 
     return df_42a, df_map
-
 
 # ---------------------------
 # STREAMLIT UI PUBLIC FUNCTION

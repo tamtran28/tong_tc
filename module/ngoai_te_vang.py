@@ -1,12 +1,28 @@
 import streamlit as st
 import pandas as pd
 import numpy as np
+
+from module.error_utils import UserFacingError, _should_reraise
 from io import BytesIO 
 # ======================================================
 #   MODULE: NGOẠI TỆ & VÀNG (FULL TIÊU CHÍ 1 → 6)
 # ======================================================
 
 def run_ngoai_te_vang():
+    try:
+        _run_ngoai_te_vang()
+    except UserFacingError:
+        raise
+    except Exception as exc:
+        if _should_reraise(exc):
+            raise
+
+        raise UserFacingError(
+            "Đã xảy ra lỗi khi xử lý Ngoại tệ & Vàng (TC5–TC6). Vui lòng kiểm tra file đầu vào."
+        ) from exc
+
+
+def _run_ngoai_te_vang():
 
     st.header("💱 NGHIỆP VỤ MUA BÁN NGOẠI TỆ / VÀNG – FULL 6 TIÊU CHÍ")
 

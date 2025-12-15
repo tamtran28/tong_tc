@@ -1,5 +1,6 @@
-import sqlite3
 import os
+import sqlite3
+
 from db.security import hash_password, verify_password
 
 # 📌 Lưu database vào thư mục persistent của Streamlit Cloud
@@ -65,6 +66,20 @@ def insert_user(username, full_name, role, password):
     )
     conn.commit()
     conn.close()
+
+
+def get_all_users():
+    """Lấy toàn bộ user để hiển thị ở màn reset mật khẩu admin."""
+    init_db()
+    conn = sqlite3.connect(DB_PATH)
+    c = conn.cursor()
+    c.execute("SELECT username, full_name, role FROM users ORDER BY username ASC")
+    users = [
+        {"username": row[0], "full_name": row[1], "role": row[2]}
+        for row in c.fetchall()
+    ]
+    conn.close()
+    return users
 
 #them
 def create_user(username, full_name, role, password):

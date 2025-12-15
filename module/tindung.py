@@ -8,6 +8,8 @@ import pandas as pd
 import numpy as np
 import io
 
+from module.error_utils import UserFacingError, _should_reraise
+
 
 # ============================================================
 # HÀM XỬ LÝ CHÍNH (KHÔNG DÙNG STREAMLIT) – CHỈ XỬ LÝ DỮ LIỆU
@@ -588,6 +590,20 @@ def process_data(
 # ============================================================
 
 def run_tin_dung():
+    try:
+        _run_tin_dung()
+    except UserFacingError:
+        raise
+    except Exception as exc:
+        if _should_reraise(exc):
+            raise
+
+        raise UserFacingError(
+            "Đã xảy ra lỗi khi xử lý Tiêu chí tín dụng CRM4–32. Vui lòng kiểm tra file đầu vào."
+        ) from exc
+
+
+def _run_tin_dung():
     st.title("📊 HỆ THỐNG TỔNG HỢP & ĐỐI CHIẾU DỮ LIỆU CRM4 – CRM32")
 
 #     st.markdown(

@@ -1,5 +1,5 @@
 import traceback
-from typing import Iterable, List, Optional
+
 import streamlit as st
 
 
@@ -13,6 +13,7 @@ def render_error(message: str, exc: Optional[Exception] = None) -> None:
     if exc is not None:
         with st.expander("Chi tiết kỹ thuật (dành cho đội phát triển)"):
             st.code("".join(traceback.format_exception(exc)), language="text")
+
 
 
 def require_columns(df, required: Iterable[str]) -> List[str]:

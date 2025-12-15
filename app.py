@@ -1,4 +1,13 @@
+import sys
+from pathlib import Path
+
 import streamlit as st
+
+# Bảo đảm thư mục gốc dự án nằm trong sys.path để tránh lỗi ImportError khi chạy bằng
+# các cấu hình khác nhau (ví dụ chạy từ thư mục khác hoặc trên Streamlit Cloud).
+ROOT_DIR = Path(__file__).resolve().parent
+if str(ROOT_DIR) not in sys.path:
+    sys.path.insert(0, str(ROOT_DIR))
 
 # ==== LOGIN SYSTEM ====
 from db.login_page import show_login_page, logout_button

@@ -381,9 +381,6 @@ def process_uyquyen_sms_scm(
     return merged, df_tc3
 
 
-# ---------------------------
-# XỬ LÝ TIÊU CHÍ 4-5 (42a + Mapping)
-# ---------------------------
 def process_tieuchi_4_5(
     files_42a_upload: List,
     file_42b_upload,
@@ -400,7 +397,7 @@ def process_tieuchi_4_5(
     """
 
     # =====================================================
-    # 1) GHÉP + LỌC TIÊU CHÍ 4.2.a
+    # 1) TIÊU CHÍ 4.2.a – GHÉP + LỌC KHCN
     # =====================================================
     frames = []
     for f in files_42a_upload:
@@ -417,8 +414,11 @@ def process_tieuchi_4_5(
 
     df_42a = pd.concat(frames, ignore_index=True)
 
+    # lọc chi nhánh
     if "BRCD" in df_42a.columns and chi_nhanh:
-        df_42a = df_42a[df_42a["BRCD"].astype(str).str.upper().str.contains(chi_nhanh)]
+        df_42a = df_42a[
+            df_42a["BRCD"].astype(str).str.upper().str.contains(chi_nhanh)
+        ]
 
     cols_42a = [
         "BRCD", "DEPTCD", "CUST_TYPE", "CUSTSEQ", "NMLOC", "BIRTH_DAY",
@@ -428,12 +428,15 @@ def process_tieuchi_4_5(
     df_42a = ensure_columns(df_42a, cols_42a)[cols_42a]
 
     # chỉ giữ KHCN
-    df_42a = df_42a[df_42a["CUST_TYPE"].astype(str).str.upper() == "KHCN"]
+    df_42a = df_42a[
+        df_42a["CUST_TYPE"].astype(str).str.upper() == "KHCN"
+    ]
 
     # loại TK không hợp lệ
     exclude_keywords = ["KY QUY", "GIAI NGAN", "CHI LUONG", "TKTT THE", "TRUNG GIAN"]
     df_42a = df_42a[
-        ~df_42a["SCHM_NAME"].astype(str).str.upper()
+        ~df_42a["SCHM_NAME"].astype(str)
+        .str.upper()
         .str.contains("|".join(exclude_keywords), na=False)
     ]
 
@@ -451,6 +454,7 @@ def process_tieuchi_4_5(
     df_42b["MACIF"] = df_42b["MACIF"].astype(str)
     df_42b["STKKH"] = df_42b["STKKH"].astype(str)
 
+    # CIF
     df_42a = df_42a.merge(
         df_42b.drop_duplicates("MACIF")[["MACIF", "CHARGELEVELCODE_CIF"]],
         left_on="CUSTSEQ",
@@ -463,6 +467,7 @@ def process_tieuchi_4_5(
         inplace=True
     )
 
+    # TÀI KHOẢN
     df_42a = df_42a.merge(
         df_42b.drop_duplicates("STKKH")[["STKKH", "CHARGELEVELCODE_TK"]],
         left_on="IDXACNO",
@@ -480,17 +485,19 @@ def process_tieuchi_4_5(
     )
 
     # =====================================================
-    # 3) TIÊU CHÍ 4.2.c – NHÂN SỰ
+    # 3) TIÊU CHÍ 4.2.c – NHÂN SỰ (GIỮ CỘT MÃ SỐ CIF)
     # =====================================================
     df_42c = read_excel_file_bytesio(file_42c_upload)
     df_42c = ensure_columns(df_42c, ["Mã số CIF", "Mã NV"])
 
+    # luôn đảm bảo có cột "Mã số CIF"
+    df_42a["Mã số CIF"] = df_42a["CUSTSEQ"].astype(str)
+
     df_42a = df_42a.merge(
         df_42c[["Mã số CIF", "Mã NV"]],
-        left_on="CUSTSEQ",
-        right_on="Mã số CIF",
+        on="Mã số CIF",
         how="left"
-    ).drop(columns="Mã số CIF", errors="ignore")
+    )
 
     # =====================================================
     # 4) TIÊU CHÍ 4.2.d – NHÂN SỰ NGHỈ VIỆC
@@ -500,14 +507,17 @@ def process_tieuchi_4_5(
 
     df_42a = df_42a.merge(
         df_42d[["CIF", "Ngày thôi việc"]],
-        left_on="CUSTSEQ",
+        left_on="Mã số CIF",
         right_on="CIF",
         how="left"
     )
 
     df_42a["CBNV_NGHI_VIEC"] = np.where(df_42a["CIF"].notna(), "X", "")
     df_42a.rename(columns={"Ngày thôi việc": "NGAY_NGHI_VIEC"}, inplace=True)
-    df_42a["NGAY_NGHI_VIEC"] = safe_to_datetime(df_42a["NGAY_NGHI_VIEC"]).dt.strftime("%m/%d/%Y")
+    df_42a["NGAY_NGHI_VIEC"] = safe_to_datetime(
+        df_42a["NGAY_NGHI_VIEC"]
+    ).dt.strftime("%m/%d/%Y")
+
     df_42a.drop(columns="CIF", inplace=True, errors="ignore")
 
     # =====================================================
@@ -541,7 +551,6 @@ def process_tieuchi_4_5(
     df_map["uploaddt"] = df_map["uploaddt"].dt.strftime("%m/%d/%Y")
 
     return df_42a, df_map
-
 
 # ---------------------------
 # STREAMLIT UI PUBLIC FUNCTION

@@ -193,38 +193,38 @@ def run_hdv():
     # ================================================================
     #                        TIÊU CHÍ 3
     # ================================================================
-   with tab3:
-        st.subheader("📌 TIÊU CHÍ 3 – Giao dịch tiền gửi rút")
-
-        tc3_file = st.file_uploader("📁 Tải file giao dịch (Mục 11)", type=['xls','xlsx'])
-        chi_nhanh_tc3 = st.text_input("🔍 Nhập mã SOL hoặc tên chi nhánh (TC3)", "").upper().strip()
-
-        if st.button("🚀 Chạy TIÊU CHÍ 3"):
-            if not tc3_file:
-                st.error("⚠ Vui lòng tải file TC3!")
-            else:
-                df = pd.read_excel(tc3_file, dtype=str)
-
-                df["NGAY_HACH_TOAN"] = pd.to_datetime(df["NGAY_HACH_TOAN"], errors='coerce')
-                df["ACCT_OPN_DATE"] = pd.to_datetime(df["ACCT_OPN_DATE"], errors='coerce')
-                df["PART_CLOSE_AMT"] = pd.to_numeric(df["PART_CLOSE_AMT"], errors='coerce')
-
-                df = df[df["SOL_ID"].str.upper().str.contains(chi_nhanh_tc3)]
-
-                df["CHENH_LECH_NGAY"] = (df["NGAY_HACH_TOAN"] - df["ACCT_OPN_DATE"]).dt.days
-
-                df["MO_RUT_CUNG_NGAY"] = df["CHENH_LECH_NGAY"].apply(lambda x: "X" if x==0 else "")
-                df["MO_RUT_1_3_NGAY"] = df["CHENH_LECH_NGAY"].apply(lambda x: "X" if 0<x<=3 else "")
-                df["MO_RUT_4_7_NGAY"] = df["CHENH_LECH_NGAY"].apply(lambda x: "X" if 4<=x<=7 else "")
-                df["GD_LON_HON_1TY"] = df["PART_CLOSE_AMT"].apply(lambda x: "X" if x>1_000_000_000 else "")
-
-                today = pd.Timestamp.today().normalize()
-                df["TRONG_THOI_HIEU_CAMERA"] = df["NGAY_HACH_TOAN"].apply(lambda x: "X" if (today-x).days<=90 else "")
-
-                st.success("✔ Tiêu chí 3 hoàn tất!")
-                st.dataframe(df, use_container_width=True)
-
-                download_excel(df, "TC3.xlsx")
+       with tab3:
+            st.subheader("📌 TIÊU CHÍ 3 – Giao dịch tiền gửi rút")
+    
+            tc3_file = st.file_uploader("📁 Tải file giao dịch (Mục 11)", type=['xls','xlsx'])
+            chi_nhanh_tc3 = st.text_input("🔍 Nhập mã SOL hoặc tên chi nhánh (TC3)", "").upper().strip()
+    
+            if st.button("🚀 Chạy TIÊU CHÍ 3"):
+                if not tc3_file:
+                    st.error("⚠ Vui lòng tải file TC3!")
+                else:
+                    df = pd.read_excel(tc3_file, dtype=str)
+    
+                    df["NGAY_HACH_TOAN"] = pd.to_datetime(df["NGAY_HACH_TOAN"], errors='coerce')
+                    df["ACCT_OPN_DATE"] = pd.to_datetime(df["ACCT_OPN_DATE"], errors='coerce')
+                    df["PART_CLOSE_AMT"] = pd.to_numeric(df["PART_CLOSE_AMT"], errors='coerce')
+    
+                    df = df[df["SOL_ID"].str.upper().str.contains(chi_nhanh_tc3)]
+    
+                    df["CHENH_LECH_NGAY"] = (df["NGAY_HACH_TOAN"] - df["ACCT_OPN_DATE"]).dt.days
+    
+                    df["MO_RUT_CUNG_NGAY"] = df["CHENH_LECH_NGAY"].apply(lambda x: "X" if x==0 else "")
+                    df["MO_RUT_1_3_NGAY"] = df["CHENH_LECH_NGAY"].apply(lambda x: "X" if 0<x<=3 else "")
+                    df["MO_RUT_4_7_NGAY"] = df["CHENH_LECH_NGAY"].apply(lambda x: "X" if 4<=x<=7 else "")
+                    df["GD_LON_HON_1TY"] = df["PART_CLOSE_AMT"].apply(lambda x: "X" if x>1_000_000_000 else "")
+    
+                    today = pd.Timestamp.today().normalize()
+                    df["TRONG_THOI_HIEU_CAMERA"] = df["NGAY_HACH_TOAN"].apply(lambda x: "X" if (today-x).days<=90 else "")
+    
+                    st.success("✔ Tiêu chí 3 hoàn tất!")
+                    st.dataframe(df, use_container_width=True)
+    
+                    download_excel(df, "TC3.xlsx")
 
     # with tab3:
     #     st.subheader("📌 TIÊU CHÍ 3 – Giao dịch tiền gửi rút")

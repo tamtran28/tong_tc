@@ -606,12 +606,25 @@ def run_tin_dung():
 def _run_tin_dung():
     st.title("📊 HỆ THỐNG TỔNG HỢP & ĐỐI CHIẾU DỮ LIỆU CRM4 – CRM32")
 
-#     st.markdown(
-#         """
-# Ứng dụng này chuyển toàn bộ quy trình xử lý Excel của bạn sang giao diện **Streamlit**.  
-# Vui lòng upload đầy đủ các file cần thiết, nhập chi nhánh, ngày đánh giá và địa bàn kiểm toán.
-# """
-#     )
+    st.info(
+        """
+    **Vui lòng upload đúng loại báo cáo và đúng kỳ dữ liệu.**  
+    Nếu upload sai file/mẫu cột khác hệ thống sẽ báo lỗi hoặc cho kết quả sai.
+    
+    **Yêu cầu từng file:**
+    - **1️⃣ CRM4_Du_no_theo_tai_san_dam_bao_ALL**: xuất từ CRM4, có các cột như `CIF_KH_VAY, BRANCH_VAY, CAP_2, LOAI, TS_KW_VND, DU_NO_PHAN_BO_QUY_DOI, SECU_SRL_NUM, VALUATION_DATE...`
+    - **2️⃣ RPT_CRM_32**: báo cáo CRM32, có `CUSTSEQLN, BRCD, DU_NO_QUY_DOI, SCHEME_CODE, KHE_UOC, CAP_PHE_DUYET, MUC_DICH_VAY_CAP_4...`
+    - **3️⃣ CODE_MDSDV4.xlsx**: bảng mã mục đích vay (có `CODE_MDSDV4, GROUP`)
+    - **4️⃣ CODE_LOAI_TSBD.xlsx**: bảng mã loại TSBD (có `CODE CAP 2, CODE`)
+    - **5️⃣ Giai_ngan_tien_mat_1_ty 6**: danh sách giải ngân tiền mặt (có `FORACID`)
+    - **6️⃣ Muc17_Lop2_TSTC 4**: Mục 17 tài sản (có `C01, C02, C19...`)
+    - **7️⃣ Muc55_...**: Mục 55 tất toán (có `CUSTSEQLN, KHE_UOC, NGAY_TT...`)
+    - **8️⃣ Muc56_...**: Mục 56 giải ngân (có `CIF, KHE_UOC, NGAY_GIAI_NGAN, NGAY_DAO_HAN...`)
+    - **9️⃣ Muc57_...**: Mục 57 chậm trả (có `CIF_ID, NGAY_DEN_HAN_TT, NGAY_THANH_TOAN...`)
+    
+    📌 **Lưu ý:** Nếu file có nhiều sheet, hãy đảm bảo dữ liệu nằm ở **sheet đầu tiên** (hoặc chuẩn hóa lại trước khi upload).
+    """
+    )
     st.markdown("### 📝 Nhập tham số")
 
     colA, colB = st.columns(2)

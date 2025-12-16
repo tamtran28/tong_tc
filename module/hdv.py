@@ -44,7 +44,7 @@ def run_hdv():
         ftp_files = st.file_uploader("📁 Tải các file FTP (*.xls, *.xlsx)", type=['xls','xlsx'], accept_multiple_files=True)
         tt_file = st.file_uploader("📁 Tải file Lãi suất thực trả", type=['xls','xlsx'])
 
-        chi_nhanh_tc1 = st.text_input("🔍 Nhập mã SOL hoặc tên chi nhánh", "").upper().strip()
+        chi_nhanh_tc1 = st.text_input("🔍 Nhập mã SOL", "").upper().strip()
 
         if st.button("🚀 Chạy TIÊU CHÍ 1"):
             if not (hdv_files and ftp_files and tt_file):

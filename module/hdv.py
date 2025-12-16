@@ -197,8 +197,8 @@ def run_hdv():
         st.subheader("📌 TIÊU CHÍ 3 – Giao dịch tiền gửi rút")
 
         tc3_file = st.file_uploader("📁 Tải file giao dịch (Mục 11)", type=['xls','xlsx'])
+        #chi_nhanh_tc3 = st.text_input("🔍 Nhập mã SOL", "").upper().strip()
         chi_nhanh_tc3 = st.text_input("🔍 Nhập mã SOL", "").upper().strip()
-
         if st.button("🚀 Chạy TIÊU CHÍ 3"):
             if not tc3_file:
                 st.error("⚠ Vui lòng tải file TC3!")

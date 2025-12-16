@@ -625,14 +625,14 @@ def _run_tin_dung():
     📌 **Lưu ý:** Nếu file có nhiều sheet, hãy đảm bảo dữ liệu nằm ở **sheet đầu tiên** (hoặc chuẩn hóa lại trước khi upload).
     """
     )
-    st.markdown("### 📝 Nhập tham số")
+    st.markdown("### 📝 Nhập tham số (phải nhập đầy đủ các thông tin theo yêu cầu)")
 
     colA, colB = st.columns(2)
     
     with colA:
         chi_nhanh = st.text_input(
-            "Nhập tên chi nhánh hoặc mã SOL cần lọc",
-            placeholder="Ví dụ: HANOI hoặc 001",
+            "Nhập mã SOL cần lọc",
+            placeholder="Ví dụ: 1000",
         ).strip().upper()
     
         ngay_danh_gia_input = st.date_input(

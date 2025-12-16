@@ -124,7 +124,7 @@ def run_hdv():
         ckh_tc2 = st.file_uploader("📁 Tải file HDV CHI TIẾT CKH", type=['xls','xlsx'], accept_multiple_files=True)
         kkh_tc2 = st.file_uploader("📁 Tải file HDV CHI TIẾT KKH", type=['xls','xlsx'], accept_multiple_files=True)
 
-        chi_nhanh_tc2 = st.text_input("🔍 Nhập mã SOL hoặc tên chi nhánh (TC2)", "").upper().strip()
+        chi_nhanh_tc2 = st.text_input("🔍 Nhập mã SOL", "").upper().strip()
 
         if st.button("🚀 Chạy TIÊU CHÍ 2"):
             if not (ckh_tc2 and kkh_tc2):
@@ -197,7 +197,7 @@ def run_hdv():
         st.subheader("📌 TIÊU CHÍ 3 – Giao dịch tiền gửi rút")
 
         tc3_file = st.file_uploader("📁 Tải file giao dịch (Mục 11)", type=['xls','xlsx'])
-        chi_nhanh_tc3 = st.text_input("🔍 Nhập mã SOL hoặc tên chi nhánh (TC3)", "").upper().strip()
+        chi_nhanh_tc3 = st.text_input("🔍 Nhập mã SOL", "").upper().strip()
 
         if st.button("🚀 Chạy TIÊU CHÍ 3"):
             if not tc3_file:

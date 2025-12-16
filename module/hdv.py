@@ -96,7 +96,7 @@ Gồm:
     with tab1:
         st.subheader("📌 TIÊU CHÍ 1 – HDV CKH + FTP + LS THỰC TRẢ")
 
-        st.info("✅ Nhập mã SOL (VD: 1000)")
+      
 
         hdv_files = st.file_uploader(
             "📁 Tải các file HDV CKH (*.xls, *.xlsx)",
@@ -115,9 +115,9 @@ Gồm:
             type=["xls", "xlsx"],
             key="tc1_tt_file",
         )
-
+        st.info("✅ Nhập mã SOL (VD: 1000)")
         chi_nhanh_tc1_raw = st.text_input(
-            "🔍 Nhập mã SOL / tên chi nhánh",
+            "🔍 Nhập mã SOL",
             value="",
             key="tc1_sol_input",
         )
@@ -190,7 +190,7 @@ Gồm:
     # ================================================================
     with tab2:
         st.subheader("📌 TIÊU CHÍ 2 – Xếp hạng KH theo số dư")
-        st.info("✅ Nhập mã SOL** (VD: 1000)")
+      
 
         ckh_tc2 = st.file_uploader(
             "📁 Tải file HDV CHI TIẾT CKH",
@@ -204,9 +204,9 @@ Gồm:
             accept_multiple_files=True,
             key="tc2_kkh_files",
         )
-
+        st.info("✅ Nhập mã SOL** (VD: 1000)")
         chi_nhanh_tc2_raw = st.text_input(
-            "🔍 Nhập mã SOL / tên chi nhánh",
+            "🔍 Nhập mã SOL",
             value="",
             key="tc2_sol_input",
         )
@@ -292,16 +292,15 @@ Gồm:
     # ================================================================
     with tab3:
         st.subheader("📌 TIÊU CHÍ 3 – Giao dịch tiền gửi rút")
-        st.info("✅ Nhập mã SOL (VD: 1000).")
-
+       
         tc3_file = st.file_uploader(
             "📁 Tải file giao dịch (Mục 11)",
             type=["xls", "xlsx"],
             key="tc3_file_muc11",
         )
-
+        st.info("✅ Nhập mã SOL (VD: 1000).")
         chi_nhanh_tc3_raw = st.text_input(
-            "🔍 Nhập mã SOL / tên chi nhánh",
+            "🔍 Nhập mã SOL",
             value="",
             key="tc3_sol_input",
         )

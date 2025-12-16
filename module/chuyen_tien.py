@@ -1,11 +1,6 @@
 import streamlit as st
 import pandas as pd
-import numpy as np
 from io import BytesIO
-
-# ======================================================
-#   MODULE: CHUYỂN TIỀN (Mục 09)
-# ======================================================
 
 def run_chuyen_tien():
 
@@ -23,19 +18,17 @@ def run_chuyen_tien():
         # ================================
         # XỬ LÝ CÁC CỘT PHỔ BIẾN
         # ================================
-        df["AMOUNT"] = pd.to_numeric(df.get("AMOUNT", 0), errors="coerce")
-        df["FX_RATE"] = pd.to_numeric(df.get("FX_RATE", 0), errors="coerce")
+        df["AMOUNT"] = pd.to_numeric(df.get("AMOUNT", pd.Series("", index=df.index)), errors="coerce").fillna(0)
+        df["FX_RATE"] = pd.to_numeric(df.get("FX_RATE", pd.Series("", index=df.index)), errors="coerce").fillna(0)
 
         # Flag cảnh báo nếu số tiền lớn
         df["GD > 500TR"] = df["AMOUNT"].apply(lambda x: "X" if x >= 500_000_000 else "")
 
         # Chuyển tiền bất thường (ví dụ: không có invoice)
-        df["THIẾU CHỨNG TỪ"] = df.get("INVOICE_NO", "").apply(
-            lambda x: "X" if (pd.isna(x) or x == "") else ""
-        )
+        invoice_col = df.get("INVOICE_NO", pd.Series("", index=df.index))
+        df["THIẾU CHỨNG TỪ"] = invoice_col.apply(lambda x: "X" if (pd.isna(x) or str(x).strip() == "") else "")
 
         st.success("✔ Đã xử lý Mục 09")
-
         st.dataframe(df)
 
         # ================================

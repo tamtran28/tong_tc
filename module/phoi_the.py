@@ -3,7 +3,7 @@ import pandas as pd
 import numpy as np
 from io import BytesIO
 
-from module.error_utils import UserFacingError, _should_reraise
+from module.error_utils import UserFacingError, _should_reraise, validate_sol_only
 
 # ============================================================
 #     MODULE PHÔI THẺ – GTCG
@@ -33,9 +33,16 @@ def _run_phoi_the():
 
     if sol_kiem_toan and uploaded_file1 and uploaded_file2:
         st.success("✔ Đã nhập mã SOL & tải đủ 2 file.")
-
+        
         if st.button("🚀 Xử lý dữ liệu phôi thẻ"):
-            prefix_tbl = f"{sol_kiem_toan}G"
+            try:
+                sol_kiem_toan = validate_sol_only(sol_raw)
+
+                if uploaded_file1 is None or uploaded_file2 is None:
+                    raise UserFacingError("Vui lòng tải đủ 2 file: GTCG1 và GTCG2.")
+
+                st.success("✔ SOL hợp lệ & đã tải đủ 2 file. Bắt đầu xử lý...")
+                prefix_tbl = f"{sol_kiem_toan}G"
 
             # ================================================================
             # 1) XỬ LÝ FILE GTCG1 (TIÊU CHÍ 1 & 2)

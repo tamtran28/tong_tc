@@ -63,13 +63,13 @@ def download_excel(df: pd.DataFrame, filename: str):
 #     return s.upper()
 
 
-# def filter_by_sol_contains(df: pd.DataFrame, col: str, pattern: str) -> pd.DataFrame:
-#     """
-#     Lọc contains (case-insensitive). pattern đã được validate trước.
-#     """
-#     if pattern is None or str(pattern).strip() == "":
-#         return df
-#     return df[df[col].astype(str).str.upper().str.contains(str(pattern).upper(), na=False)]
+def filter_by_sol_contains(df: pd.DataFrame, col: str, pattern: str) -> pd.DataFrame:
+    """
+    Lọc contains (case-insensitive). pattern đã được validate trước.
+    """
+    if pattern is None or str(pattern).strip() == "":
+        return df
+    return df[df[col].astype(str).str.upper().str.contains(str(pattern).upper(), na=False)]
 
 
 # ==========================================================

@@ -9,7 +9,7 @@ import pandas as pd
 import numpy as np
 from io import BytesIO
 
-from module.error_utils import ensure_required_columns, render_error, UserFacingError
+from module.error_utils import ensure_required_columns, render_error, UserFacingError,validate_sol_only
 
 
 # ==========================================================
@@ -31,45 +31,45 @@ def download_excel(df: pd.DataFrame, filename: str):
     )
 
 
-def validate_sol_or_branch(raw: str, field_label: str = "mã SOL / tên chi nhánh") -> str:
-    """
-    Accept:
-      - SOL: đúng 3 chữ số (001, 123...)
-      - Tên chi nhánh: chữ + khoảng trắng (có dấu)
-    Return:
-      - Chuỗi chuẩn hoá để dùng filter (uppercase + strip)
-    Raise:
-      - UserFacingError nếu không hợp lệ
-    """
-    if raw is None:
-        raise UserFacingError(f"Vui lòng nhập {field_label}.")
+# def validate_sol_or_branch(raw: str, field_label: str = "mã SOL / tên chi nhánh") -> str:
+#     """
+#     Accept:
+#       - SOL: đúng 3 chữ số (001, 123...)
+#       - Tên chi nhánh: chữ + khoảng trắng (có dấu)
+#     Return:
+#       - Chuỗi chuẩn hoá để dùng filter (uppercase + strip)
+#     Raise:
+#       - UserFacingError nếu không hợp lệ
+#     """
+#     if raw is None:
+#         raise UserFacingError(f"Vui lòng nhập {field_label}.")
 
-    s = str(raw).strip()
-    if s == "":
-        raise UserFacingError(f"Vui lòng nhập {field_label} (ví dụ: 1000).")
+#     s = str(raw).strip()
+#     if s == "":
+#         raise UserFacingError(f"Vui lòng nhập {field_label} (ví dụ: 1000).")
 
-    # Nếu là SOL: chỉ số và đúng 3 ký tự
-    if s.isdigit():
-        if len(s) != 4:
-            raise UserFacingError("Mã SOL phải gồm đúng 4 chữ số (ví dụ: 1000).")
-        return s  # giữ nguyên 3 số
+#     # Nếu là SOL: chỉ số và đúng 3 ký tự
+#     if s.isdigit():
+#         if len(s) != 4:
+#             raise UserFacingError("Mã SOL phải gồm đúng 4 chữ số (ví dụ: 1000).")
+#         return s  # giữ nguyên 3 số
 
-    # Nếu là tên chi nhánh: chỉ chữ và khoảng trắng (hỗ trợ tiếng Việt có dấu)
-    if not re.fullmatch(r"[A-Za-zÀ-ỹ\s]+", s):
-        raise UserFacingError(
-            "Tên chi nhánh chỉ được chứa chữ cái và khoảng trắng (không dùng số/ký tự đặc biệt)."
-        )
+#     # Nếu là tên chi nhánh: chỉ chữ và khoảng trắng (hỗ trợ tiếng Việt có dấu)
+#     if not re.fullmatch(r"[A-Za-zÀ-ỹ\s]+", s):
+#         raise UserFacingError(
+#             "Tên chi nhánh chỉ được chứa chữ cái và khoảng trắng (không dùng số/ký tự đặc biệt)."
+#         )
 
-    return s.upper()
+#     return s.upper()
 
 
-def filter_by_sol_contains(df: pd.DataFrame, col: str, pattern: str) -> pd.DataFrame:
-    """
-    Lọc contains (case-insensitive). pattern đã được validate trước.
-    """
-    if pattern is None or str(pattern).strip() == "":
-        return df
-    return df[df[col].astype(str).str.upper().str.contains(str(pattern).upper(), na=False)]
+# def filter_by_sol_contains(df: pd.DataFrame, col: str, pattern: str) -> pd.DataFrame:
+#     """
+#     Lọc contains (case-insensitive). pattern đã được validate trước.
+#     """
+#     if pattern is None or str(pattern).strip() == "":
+#         return df
+#     return df[df[col].astype(str).str.upper().str.contains(str(pattern).upper(), na=False)]
 
 
 # ==========================================================
@@ -129,7 +129,7 @@ Gồm:
                 st.error("⚠ Vui lòng tải đầy đủ 3 loại file!")
             else:
                 try:
-                    chi_nhanh_tc1 = validate_sol_or_branch(chi_nhanh_tc1_raw)
+                    chi_nhanh_tc1 = validate_sol_only(chi_nhanh_tc1_raw)
 
                     cols_ckh = [
                         "BRCD", "DEPTCD", "CUST_TYPE", "NMLOC", "CUSTSEQ", "BIRTH_DAY", "IDXACNO",
@@ -218,7 +218,7 @@ Gồm:
                 st.error("⚠ Vui lòng tải file CKH và KKH!")
             else:
                 try:
-                    chi_nhanh_tc2 = validate_sol_or_branch(chi_nhanh_tc2_raw)
+                    chi_nhanh_tc2 = validate_sol_only(chi_nhanh_tc2_raw)
 
                     cols = [
                         "BRCD", "DEPTCD", "CUST_TYPE", "CUSTSEQ", "NMLOC", "BIRTH_DAY", "IDXACNO",
@@ -312,7 +312,7 @@ Gồm:
                 st.error("⚠ Vui lòng tải file TC3!")
             else:
                 try:
-                    chi_nhanh_tc3 = validate_sol_or_branch(chi_nhanh_tc3_raw)
+                    chi_nhanh_tc3 = validate_sol_only(chi_nhanh_tc3_raw)
 
                     df = pd.read_excel(tc3_file, dtype=str)
                     ensure_required_columns(

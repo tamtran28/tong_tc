@@ -196,10 +196,7 @@ def run_module_pos():
 def _run_module_pos():
     
     
-    st.markdown("**Upload 3 file:
-    6.2a trước 23/05,
-    6.2a sau 23/05,
-    6.2b (MUC51)**")
+    st.markdown("**Upload 3 file:6.2a trước 23/05, 6.2a sau 23/05, 6.2b (MUC51)**")
 
     start_date = st.date_input("Ngày bắt đầu THKT", value=date(2025, 1, 1))
     end_date = st.date_input("Ngày kết thúc THKT", value=date(2025, 10, 31))
@@ -210,7 +207,7 @@ def _run_module_pos():
     with col2:
         file_new = st.file_uploader("📂 6.2a – File SAU 23/05", type=["xls", "xlsx"])
 
-    file_6_2b = st.file_uploader("📂 6.2b – MUC51_1600", type=["xls", "xlsx"])
+    file_6_2b = st.file_uploader("📂 6.2b – MUC51_sol", type=["xls", "xlsx"])
 
     run_button = st.button("🚀 Chạy POS")
 

@@ -24,7 +24,7 @@ def run_ngoai_te_vang():
 
 def _run_ngoai_te_vang():
 
-    st.header("💱 NGHIỆP VỤ MUA BÁN NGOẠI TỆ / VÀNG – FULL 6 TIÊU CHÍ")
+    # st.header("💱 NGHIỆP VỤ MUA BÁN NGOẠI TỆ / VÀNG – FULL 6 TIÊU CHÍ")
 
     st.set_page_config(page_title="Xử lý giao dịch Ngoại tệ", layout="wide")
     

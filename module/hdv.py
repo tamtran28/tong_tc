@@ -94,96 +94,249 @@ Gồm:
     #                        TIÊU CHÍ 1
     # ================================================================
     with tab1:
-        st.subheader("📌 TIÊU CHÍ 1 – HDV CKH + FTP + LS THỰC TRẢ")
+    st.subheader("📌 TIÊU CHÍ 1 – HDV CKH + FTP + LS THỰC TRẢ")
+
+    hdv_files = st.file_uploader(
+        "📁 Tải các file HDV CKH (*.xls, *.xlsx)",
+        type=["xls", "xlsx"],
+        accept_multiple_files=True,
+        key="tc1_hdv_files",
+    )
+
+    ftp_files = st.file_uploader(
+        "📁 Tải các file FTP (*.xls, *.xlsx)",
+        type=["xls", "xlsx"],
+        accept_multiple_files=True,
+        key="tc1_ftp_files",
+    )
+
+    tt_file = st.file_uploader(
+        "📁 Tải file Lãi suất thực trả",
+        type=["xls", "xlsx"],
+        key="tc1_tt_file",
+    )
+
+    st.info("✅ Nhập mã SOL (VD: 1000)")
+    chi_nhanh_tc1_raw = st.text_input("🔍 Nhập mã SOL", value="", key="tc1_sol_input")
+
+    run_tc1 = st.button("🚀 Chạy TIÊU CHÍ 1", key="tc1_run_btn")
+
+    if run_tc1:
+        if not (hdv_files and ftp_files and tt_file):
+            st.error("⚠ Vui lòng tải đầy đủ 3 loại file!")
+        else:
+            try:
+                # =========================
+                # VALIDATE SOL
+                # =========================
+                chi_nhanh_tc1 = validate_sol_only(chi_nhanh_tc1_raw)
+
+                # =========================
+                # REQUIRED COLUMNS
+                # =========================
+                cols_ckh = [
+                    "BRCD", "DEPTCD", "CUST_TYPE", "NMLOC", "CUSTSEQ",
+                    "BIRTH_DAY", "IDXACNO", "SCHM_NAME", "TERM_DAYS",
+                    "GL_SUB", "CCYCD", "CURBAL_NT", "CURBAL_VN",
+                    "OPNDT_FIRST", "OPNDT_EFFECT", "MATDT",
+                    "LS_GHISO", "LS_CONG_BO", "PROMO_CD",
+                    "KH_VIP", "CIF_OPNDT", "DP_MTHS",
+                    "DP_DAYS", "PROMO_NM", "PHANKHUC_KH"
+                ]
+
+                cols_ftp = ["CUSTSEQ", "NMLOC", "IDXACNO", "KY_HAN", "LS_FTP"]
+
+                # =========================
+                # READ CKH (NO EXTRA COLUMNS)
+                # =========================
+                df_ckh = pd.concat(
+                    [
+                        pd.read_excel(
+                            f,
+                            dtype=str,
+                            usecols=cols_ckh
+                        )
+                        for f in hdv_files
+                    ],
+                    ignore_index=True
+                )
+                ensure_required_columns(df_ckh, cols_ckh)
+
+                # =========================
+                # READ FTP
+                # =========================
+                df_ftp = pd.concat(
+                    [
+                        pd.read_excel(
+                            f,
+                            dtype=str,
+                            usecols=cols_ftp
+                        )
+                        for f in ftp_files
+                    ],
+                    ignore_index=True
+                )
+                ensure_required_columns(df_ftp, cols_ftp)
+
+                # =========================
+                # FILTER BY SOL
+                # =========================
+                df_filtered = filter_by_sol_contains(df_ckh, "BRCD", chi_nhanh_tc1)
+
+                # =========================
+                # READ LS THỰC TRẢ
+                # =========================
+                df_tt_raw = pd.read_excel(tt_file, dtype=str)
+                ensure_required_columns(df_tt_raw, ["Số tài khoản", "Lãi suất thực trả"])
+
+                df_tt = df_tt_raw.rename(
+                    columns={
+                        "Số tài khoản": "IDXACNO",
+                        "Lãi suất thực trả": "LS_THUC_TRA"
+                    }
+                )
+
+                # =========================
+                # MERGE DATA
+                # =========================
+                df_merge = df_filtered.merge(
+                    df_ftp[["IDXACNO", "LS_FTP"]].drop_duplicates(),
+                    on="IDXACNO",
+                    how="left",
+                )
+
+                df_merge = df_merge.merge(
+                    df_tt[["IDXACNO", "LS_THUC_TRA"]],
+                    on="IDXACNO",
+                    how="left",
+                )
+
+                # =========================
+                # CONVERT TO NUMERIC
+                # =========================
+                for c in ["LS_GHISO", "LS_CONG_BO", "LS_FTP", "LS_THUC_TRA"]:
+                    df_merge[c] = pd.to_numeric(df_merge[c], errors="coerce")
+
+                # =========================
+                # BUSINESS RULES
+                # =========================
+                df_merge["LSGS ≠ LSCB"] = (df_merge["LS_GHISO"] != df_merge["LS_CONG_BO"]).map(
+                    {True: "X", False: ""}
+                )
+
+                df_merge["Không có LS trình duyệt"] = df_merge["LS_THUC_TRA"].isna().map(
+                    {True: "X", False: ""}
+                )
+
+                df_merge["LSGS > FTP"] = (df_merge["LS_GHISO"] > df_merge["LS_FTP"]).map(
+                    {True: "X", False: ""}
+                )
+
+                # =========================
+                # OUTPUT
+                # =========================
+                st.success("✔ Tiêu chí 1 hoàn tất!")
+                st.dataframe(df_merge, use_container_width=True)
+                download_excel(df_merge, "TC1.xlsx")
+
+            except UserFacingError as exc:
+                render_error(str(exc))
+            except Exception as exc:
+                render_error(
+                    "❌ Không thể xử lý Tiêu chí 1. Vui lòng kiểm tra định dạng & cột dữ liệu các file.",
+                    exc,
+                )
+    # with tab1:
+    #     st.subheader("📌 TIÊU CHÍ 1 – HDV CKH + FTP + LS THỰC TRẢ")
 
       
 
-        hdv_files = st.file_uploader(
-            "📁 Tải các file HDV CKH (*.xls, *.xlsx)",
-            type=["xls", "xlsx"],
-            accept_multiple_files=True,
-            key="tc1_hdv_files",
-        )
-        ftp_files = st.file_uploader(
-            "📁 Tải các file FTP (*.xls, *.xlsx)",
-            type=["xls", "xlsx"],
-            accept_multiple_files=True,
-            key="tc1_ftp_files",
-        )
-        tt_file = st.file_uploader(
-            "📁 Tải file Lãi suất thực trả",
-            type=["xls", "xlsx"],
-            key="tc1_tt_file",
-        )
-        st.info("✅ Nhập mã SOL (VD: 1000)")
-        chi_nhanh_tc1_raw = st.text_input(
-            "🔍 Nhập mã SOL",
-            value="",
-            key="tc1_sol_input",
-        )
+    #     hdv_files = st.file_uploader(
+    #         "📁 Tải các file HDV CKH (*.xls, *.xlsx)",
+    #         type=["xls", "xlsx"],
+    #         accept_multiple_files=True,
+    #         key="tc1_hdv_files",
+    #     )
+    #     ftp_files = st.file_uploader(
+    #         "📁 Tải các file FTP (*.xls, *.xlsx)",
+    #         type=["xls", "xlsx"],
+    #         accept_multiple_files=True,
+    #         key="tc1_ftp_files",
+    #     )
+    #     tt_file = st.file_uploader(
+    #         "📁 Tải file Lãi suất thực trả",
+    #         type=["xls", "xlsx"],
+    #         key="tc1_tt_file",
+    #     )
+    #     st.info("✅ Nhập mã SOL (VD: 1000)")
+    #     chi_nhanh_tc1_raw = st.text_input(
+    #         "🔍 Nhập mã SOL",
+    #         value="",
+    #         key="tc1_sol_input",
+    #     )
 
-        run_tc1 = st.button("🚀 Chạy TIÊU CHÍ 1", key="tc1_run_btn")
+    #     run_tc1 = st.button("🚀 Chạy TIÊU CHÍ 1", key="tc1_run_btn")
 
-        if run_tc1:
-            if not (hdv_files and ftp_files and tt_file):
-                st.error("⚠ Vui lòng tải đầy đủ 3 loại file!")
-            else:
-                try:
-                    chi_nhanh_tc1 = validate_sol_only(chi_nhanh_tc1_raw)
+    #     if run_tc1:
+    #         if not (hdv_files and ftp_files and tt_file):
+    #             st.error("⚠ Vui lòng tải đầy đủ 3 loại file!")
+    #         else:
+    #             try:
+    #                 chi_nhanh_tc1 = validate_sol_only(chi_nhanh_tc1_raw)
 
-                    cols_ckh = [
-                        "BRCD", "DEPTCD", "CUST_TYPE", "NMLOC", "CUSTSEQ", "BIRTH_DAY", "IDXACNO",
-                        "SCHM_NAME", "TERM_DAYS", "GL_SUB", "CCYCD", "CURBAL_NT", "CURBAL_VN",
-                        "OPNDT_FIRST", "OPNDT_EFFECT", "MATDT", "LS_GHISO", "LS_CONG_BO",
-                        "PROMO_CD", "KH_VIP", "CIF_OPNDT", "DP_MTHS", "DP_DAYS", "PROMO_NM", "PHANKHUC_KH"
-                    ]
+    #                 cols_ckh = [
+    #                     "BRCD", "DEPTCD", "CUST_TYPE", "NMLOC", "CUSTSEQ", "BIRTH_DAY", "IDXACNO",
+    #                     "SCHM_NAME", "TERM_DAYS", "GL_SUB", "CCYCD", "CURBAL_NT", "CURBAL_VN",
+    #                     "OPNDT_FIRST", "OPNDT_EFFECT", "MATDT", "LS_GHISO", "LS_CONG_BO",
+    #                     "PROMO_CD", "KH_VIP", "CIF_OPNDT", "DP_MTHS", "DP_DAYS", "PROMO_NM", "PHANKHUC_KH"
+    #                 ]
 
-                    df_ckh = pd.concat([pd.read_excel(f, dtype=str) for f in hdv_files], ignore_index=True)
-                    ensure_required_columns(df_ckh, cols_ckh)
-                    df_ckh = df_ckh[cols_ckh]
+    #                 df_ckh = pd.concat([pd.read_excel(f, dtype=str) for f in hdv_files], ignore_index=True)
+    #                 ensure_required_columns(df_ckh, cols_ckh)
+    #                 df_ckh = df_ckh[cols_ckh]
 
-                    cols_ftp = ["CUSTSEQ", "NMLOC", "IDXACNO", "KY_HAN", "LS_FTP"]
-                    df_ftp = pd.concat([pd.read_excel(f, dtype=str) for f in ftp_files], ignore_index=True)
-                    ensure_required_columns(df_ftp, cols_ftp)
-                    df_ftp = df_ftp[cols_ftp]
+    #                 cols_ftp = ["CUSTSEQ", "NMLOC", "IDXACNO", "KY_HAN", "LS_FTP"]
+    #                 df_ftp = pd.concat([pd.read_excel(f, dtype=str) for f in ftp_files], ignore_index=True)
+    #                 ensure_required_columns(df_ftp, cols_ftp)
+    #                 df_ftp = df_ftp[cols_ftp]
 
-                    # Lọc theo SOL/chi nhánh
-                    df_filtered = filter_by_sol_contains(df_ckh, "BRCD", chi_nhanh_tc1)
+    #                 # Lọc theo SOL/chi nhánh
+    #                 df_filtered = filter_by_sol_contains(df_ckh, "BRCD", chi_nhanh_tc1)
 
-                    df_tt_raw = pd.read_excel(tt_file, dtype=str)
-                    ensure_required_columns(df_tt_raw, ["Số tài khoản", "Lãi suất thực trả"])
+    #                 df_tt_raw = pd.read_excel(tt_file, dtype=str)
+    #                 ensure_required_columns(df_tt_raw, ["Số tài khoản", "Lãi suất thực trả"])
 
-                    df_tt = df_tt_raw.rename(
-                        columns={"Số tài khoản": "IDXACNO", "Lãi suất thực trả": "LS_THUC_TRA"}
-                    )
+    #                 df_tt = df_tt_raw.rename(
+    #                     columns={"Số tài khoản": "IDXACNO", "Lãi suất thực trả": "LS_THUC_TRA"}
+    #                 )
 
-                    df_merge = df_filtered.merge(
-                        df_ftp[["IDXACNO", "LS_FTP"]].drop_duplicates(),
-                        on="IDXACNO",
-                        how="left",
-                    )
-                    df_merge = df_merge.merge(df_tt, on="IDXACNO", how="left")
+    #                 df_merge = df_filtered.merge(
+    #                     df_ftp[["IDXACNO", "LS_FTP"]].drop_duplicates(),
+    #                     on="IDXACNO",
+    #                     how="left",
+    #                 )
+    #                 df_merge = df_merge.merge(df_tt, on="IDXACNO", how="left")
 
-                    df_merge["LS_GHISO"] = pd.to_numeric(df_merge["LS_GHISO"], errors="coerce")
-                    df_merge["LS_CONG_BO"] = pd.to_numeric(df_merge["LS_CONG_BO"], errors="coerce")
-                    df_merge["LS_THUC_TRA"] = pd.to_numeric(df_merge["LS_THUC_TRA"], errors="coerce")
-                    df_merge["LS_FTP"] = pd.to_numeric(df_merge["LS_FTP"], errors="coerce")
+    #                 df_merge["LS_GHISO"] = pd.to_numeric(df_merge["LS_GHISO"], errors="coerce")
+    #                 df_merge["LS_CONG_BO"] = pd.to_numeric(df_merge["LS_CONG_BO"], errors="coerce")
+    #                 df_merge["LS_THUC_TRA"] = pd.to_numeric(df_merge["LS_THUC_TRA"], errors="coerce")
+    #                 df_merge["LS_FTP"] = pd.to_numeric(df_merge["LS_FTP"], errors="coerce")
 
-                    df_merge["LSGS ≠ LSCB"] = (df_merge["LS_GHISO"] != df_merge["LS_CONG_BO"]).map({True: "X", False: ""})
-                    df_merge["Không có LS trình duyệt"] = df_merge["LS_THUC_TRA"].isna().map({True: "X", False: ""})
-                    df_merge["LSGS > FTP"] = (df_merge["LS_GHISO"] > df_merge["LS_FTP"]).map({True: "X", False: ""})
+    #                 df_merge["LSGS ≠ LSCB"] = (df_merge["LS_GHISO"] != df_merge["LS_CONG_BO"]).map({True: "X", False: ""})
+    #                 df_merge["Không có LS trình duyệt"] = df_merge["LS_THUC_TRA"].isna().map({True: "X", False: ""})
+    #                 df_merge["LSGS > FTP"] = (df_merge["LS_GHISO"] > df_merge["LS_FTP"]).map({True: "X", False: ""})
 
-                    st.success("✔ Tiêu chí 1 hoàn tất!")
-                    st.dataframe(df_merge, use_container_width=True)
-                    download_excel(df_merge, "TC1.xlsx")
+    #                 st.success("✔ Tiêu chí 1 hoàn tất!")
+    #                 st.dataframe(df_merge, use_container_width=True)
+    #                 download_excel(df_merge, "TC1.xlsx")
 
-                except UserFacingError as exc:
-                    render_error(str(exc))
-                except Exception as exc:
-                    render_error(
-                        "Không thể xử lý Tiêu chí 1. Vui lòng kiểm tra định dạng và cột dữ liệu trong các file CKH/FTP/LS.",
-                        exc,
-                    )
+    #             except UserFacingError as exc:
+    #                 render_error(str(exc))
+    #             except Exception as exc:
+    #                 render_error(
+    #                     "Không thể xử lý Tiêu chí 1. Vui lòng kiểm tra định dạng và cột dữ liệu trong các file CKH/FTP/LS.",
+    #                     exc,
+    #                 )
 
     # ================================================================
     #                        TIÊU CHÍ 2

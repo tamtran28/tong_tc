@@ -93,7 +93,11 @@ Gồm:
     # ================================================================
     #                        TIÊU CHÍ 1
     # ================================================================
-with st.tab("TIÊU CHÍ 1"):
+    # =========================
+# TIÊU CHÍ 1 – HDV CKH + FTP + LS THỰC TRẢ
+# =========================
+
+with tab1:
     st.subheader("📌 TIÊU CHÍ 1 – HDV CKH + FTP + LS THỰC TRẢ")
 
     hdv_files = st.file_uploader(
@@ -116,12 +120,14 @@ with st.tab("TIÊU CHÍ 1"):
         key="tc1_tt_file",
     )
 
-    chi_nhanh_tc1_raw = st.text_input("🔍 Nhập mã SOL (VD: 1000)", key="tc1_sol_input")
-    run_tc1 = st.button("🚀 Chạy TIÊU CHÍ 1", key="tc1_run_btn")
+    st.info("✅ Nhập mã SOL (VD: 1000)")
+    chi_nhanh_tc1_raw = st.text_input(
+        "🔍 Nhập mã SOL",
+        value="",
+        key="tc1_sol_input",
+    )
 
-    # =========================
-    # RUN
-    # =========================
+    run_tc1 = st.button("🚀 Chạy TIÊU CHÍ 1", key="tc1_run_btn")
 
     if run_tc1:
         if not (hdv_files and ftp_files and tt_file):
@@ -137,42 +143,40 @@ with st.tab("TIÊU CHÍ 1"):
                 # REQUIRED COLUMNS
                 # =========================
                 cols_ckh = [
-                    "BRCD", "DEPTCD", "CUST_TYPE", "NMLOC", "CUSTSEQ",
-                    "BIRTH_DAY", "IDXACNO", "SCHM_NAME", "TERM_DAYS",
-                    "GL_SUB", "CCYCD", "CURBAL_NT", "CURBAL_VN",
-                    "OPNDT_FIRST", "OPNDT_EFFECT", "MATDT",
-                    "LS_GHISO", "LS_CONG_BO", "PROMO_CD",
-                    "KH_VIP", "CIF_OPNDT", "DP_MTHS",
-                    "DP_DAYS", "PROMO_NM", "PHANKHUC_KH"
+                    "BRCD", "DEPTCD", "CUST_TYPE", "NMLOC", "CUSTSEQ", "BIRTH_DAY",
+                    "IDXACNO", "SCHM_NAME", "TERM_DAYS", "GL_SUB", "CCYCD",
+                    "CURBAL_NT", "CURBAL_VN", "OPNDT_FIRST", "OPNDT_EFFECT",
+                    "MATDT", "LS_GHISO", "LS_CONG_BO", "PROMO_CD", "KH_VIP",
+                    "CIF_OPNDT", "DP_MTHS", "DP_DAYS", "PROMO_NM", "PHANKHUC_KH"
                 ]
 
-                cols_ftp = ["IDXACNO", "LS_FTP"]
+                cols_ftp_use = ["IDXACNO", "LS_FTP"]
 
                 # =========================
-                # READ CKH (LOCK COLUMNS)
+                # READ CKH (KHÓA CỘT)
                 # =========================
                 df_ckh = pd.concat(
                     [
                         pd.read_excel(f, dtype=str, usecols=cols_ckh)
                         for f in hdv_files
                     ],
-                    ignore_index=True,
+                    ignore_index=True
                 )
                 ensure_required_columns(df_ckh, cols_ckh)
                 df_ckh = df_ckh.loc[:, cols_ckh]
 
                 # =========================
-                # READ FTP (LOCK COLUMNS)
+                # READ FTP (KHÓA CỘT NGAY TỪ ĐẦU)
                 # =========================
                 df_ftp = pd.concat(
                     [
-                        pd.read_excel(f, dtype=str, usecols=cols_ftp)
+                        pd.read_excel(f, dtype=str, usecols=cols_ftp_use)
                         for f in ftp_files
                     ],
-                    ignore_index=True,
+                    ignore_index=True
                 )
-                ensure_required_columns(df_ftp, cols_ftp)
-                df_ftp = df_ftp.loc[:, cols_ftp]
+                ensure_required_columns(df_ftp, cols_ftp_use)
+                df_ftp = df_ftp.loc[:, cols_ftp_use].drop_duplicates()
 
                 # =========================
                 # FILTER BY SOL
@@ -180,7 +184,7 @@ with st.tab("TIÊU CHÍ 1"):
                 df_filtered = filter_by_sol_contains(df_ckh, "BRCD", chi_nhanh_tc1)
 
                 # =========================
-                # READ LS THỰC TRẢ
+                # READ LS THỰC TRẢ (CHỈ LẤY 2 CỘT)
                 # =========================
                 df_tt_raw = pd.read_excel(tt_file, dtype=str)
                 ensure_required_columns(df_tt_raw, ["Số tài khoản", "Lãi suất thực trả"])
@@ -197,18 +201,18 @@ with st.tab("TIÊU CHÍ 1"):
                 )
 
                 # =========================
-                # MERGE (NO EXTRA COLUMNS)
+                # MERGE (KHÔNG BAO GIỜ DƯ CỘT)
                 # =========================
                 df_merge = df_filtered.merge(
-                    df_ftp.drop_duplicates(),
+                    df_ftp,
                     on="IDXACNO",
-                    how="left",
+                    how="left"
                 )
 
                 df_merge = df_merge.merge(
                     df_tt,
                     on="IDXACNO",
-                    how="left",
+                    how="left"
                 )
 
                 # =========================
@@ -233,7 +237,7 @@ with st.tab("TIÊU CHÍ 1"):
                 ).map({True: "X", False: ""})
 
                 # =========================
-                # FINAL COLUMN LOCK (ANTI DƯ CỘT)
+                # FINAL COLUMN LOCK (CHỐNG DƯ CỘT TUYỆT ĐỐI)
                 # =========================
                 final_cols = cols_ckh + [
                     "LS_FTP",
@@ -259,6 +263,7 @@ with st.tab("TIÊU CHÍ 1"):
                     "❌ Không thể xử lý Tiêu chí 1. Vui lòng kiểm tra file đầu vào.",
                     exc,
                 )
+
     # with tab1:
     #     st.subheader("📌 TIÊU CHÍ 1 – HDV CKH + FTP + LS THỰC TRẢ")
 

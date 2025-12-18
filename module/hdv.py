@@ -93,7 +93,7 @@ Gồm:
     # ================================================================
     #                        TIÊU CHÍ 1
     # ================================================================
-    with tab1:
+    with st.tab("TIÊU CHÍ 1"):
     st.subheader("📌 TIÊU CHÍ 1 – HDV CKH + FTP + LS THỰC TRẢ")
 
     hdv_files = st.file_uploader(
@@ -116,10 +116,12 @@ Gồm:
         key="tc1_tt_file",
     )
 
-    st.info("✅ Nhập mã SOL (VD: 1000)")
-    chi_nhanh_tc1_raw = st.text_input("🔍 Nhập mã SOL", value="", key="tc1_sol_input")
-
+    chi_nhanh_tc1_raw = st.text_input("🔍 Nhập mã SOL (VD: 1000)", key="tc1_sol_input")
     run_tc1 = st.button("🚀 Chạy TIÊU CHÍ 1", key="tc1_run_btn")
+
+    # =========================
+    # RUN
+    # =========================
 
     if run_tc1:
         if not (hdv_files and ftp_files and tt_file):
@@ -144,39 +146,33 @@ Gồm:
                     "DP_DAYS", "PROMO_NM", "PHANKHUC_KH"
                 ]
 
-                cols_ftp = ["CUSTSEQ", "NMLOC", "IDXACNO", "KY_HAN", "LS_FTP"]
+                cols_ftp = ["IDXACNO", "LS_FTP"]
 
                 # =========================
-                # READ CKH (NO EXTRA COLUMNS)
+                # READ CKH (LOCK COLUMNS)
                 # =========================
                 df_ckh = pd.concat(
                     [
-                        pd.read_excel(
-                            f,
-                            dtype=str,
-                            usecols=cols_ckh
-                        )
+                        pd.read_excel(f, dtype=str, usecols=cols_ckh)
                         for f in hdv_files
                     ],
-                    ignore_index=True
+                    ignore_index=True,
                 )
                 ensure_required_columns(df_ckh, cols_ckh)
+                df_ckh = df_ckh.loc[:, cols_ckh]
 
                 # =========================
-                # READ FTP
+                # READ FTP (LOCK COLUMNS)
                 # =========================
                 df_ftp = pd.concat(
                     [
-                        pd.read_excel(
-                            f,
-                            dtype=str,
-                            usecols=cols_ftp
-                        )
+                        pd.read_excel(f, dtype=str, usecols=cols_ftp)
                         for f in ftp_files
                     ],
-                    ignore_index=True
+                    ignore_index=True,
                 )
                 ensure_required_columns(df_ftp, cols_ftp)
+                df_ftp = df_ftp.loc[:, cols_ftp]
 
                 # =========================
                 # FILTER BY SOL
@@ -189,24 +185,28 @@ Gồm:
                 df_tt_raw = pd.read_excel(tt_file, dtype=str)
                 ensure_required_columns(df_tt_raw, ["Số tài khoản", "Lãi suất thực trả"])
 
-                df_tt = df_tt_raw.rename(
-                    columns={
-                        "Số tài khoản": "IDXACNO",
-                        "Lãi suất thực trả": "LS_THUC_TRA"
-                    }
+                df_tt = (
+                    df_tt_raw.rename(
+                        columns={
+                            "Số tài khoản": "IDXACNO",
+                            "Lãi suất thực trả": "LS_THUC_TRA",
+                        }
+                    )
+                    .loc[:, ["IDXACNO", "LS_THUC_TRA"]]
+                    .drop_duplicates()
                 )
 
                 # =========================
-                # MERGE DATA
+                # MERGE (NO EXTRA COLUMNS)
                 # =========================
                 df_merge = df_filtered.merge(
-                    df_ftp[["IDXACNO", "LS_FTP"]].drop_duplicates(),
+                    df_ftp.drop_duplicates(),
                     on="IDXACNO",
                     how="left",
                 )
 
                 df_merge = df_merge.merge(
-                    df_tt[["IDXACNO", "LS_THUC_TRA"]],
+                    df_tt,
                     on="IDXACNO",
                     how="left",
                 )
@@ -220,17 +220,30 @@ Gồm:
                 # =========================
                 # BUSINESS RULES
                 # =========================
-                df_merge["LSGS ≠ LSCB"] = (df_merge["LS_GHISO"] != df_merge["LS_CONG_BO"]).map(
-                    {True: "X", False: ""}
-                )
+                df_merge["LSGS ≠ LSCB"] = (
+                    df_merge["LS_GHISO"] != df_merge["LS_CONG_BO"]
+                ).map({True: "X", False: ""})
 
-                df_merge["Không có LS trình duyệt"] = df_merge["LS_THUC_TRA"].isna().map(
-                    {True: "X", False: ""}
-                )
+                df_merge["Không có LS trình duyệt"] = (
+                    df_merge["LS_THUC_TRA"].isna()
+                ).map({True: "X", False: ""})
 
-                df_merge["LSGS > FTP"] = (df_merge["LS_GHISO"] > df_merge["LS_FTP"]).map(
-                    {True: "X", False: ""}
-                )
+                df_merge["LSGS > FTP"] = (
+                    df_merge["LS_GHISO"] > df_merge["LS_FTP"]
+                ).map({True: "X", False: ""})
+
+                # =========================
+                # FINAL COLUMN LOCK (ANTI DƯ CỘT)
+                # =========================
+                final_cols = cols_ckh + [
+                    "LS_FTP",
+                    "LS_THUC_TRA",
+                    "LSGS ≠ LSCB",
+                    "Không có LS trình duyệt",
+                    "LSGS > FTP",
+                ]
+
+                df_merge = df_merge.loc[:, final_cols]
 
                 # =========================
                 # OUTPUT
@@ -243,7 +256,7 @@ Gồm:
                 render_error(str(exc))
             except Exception as exc:
                 render_error(
-                    "❌ Không thể xử lý Tiêu chí 1. Vui lòng kiểm tra định dạng & cột dữ liệu các file.",
+                    "❌ Không thể xử lý Tiêu chí 1. Vui lòng kiểm tra file đầu vào.",
                     exc,
                 )
     # with tab1:

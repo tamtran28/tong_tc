@@ -619,7 +619,6 @@ def run_module_the():
 
 
 def _run_module_the():
-    st.title("📊 TIÊU CHÍ THẺ – 1600 (Mục 1.3.2)")
 
     st.markdown(
         """

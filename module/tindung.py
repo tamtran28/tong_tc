@@ -604,8 +604,7 @@ def run_tin_dung():
 
 
 def _run_tin_dung():
-    st.title("📊 HỆ THỐNG TỔNG HỢP & ĐỐI CHIẾU DỮ LIỆU CRM4 – CRM32")
-
+   
     st.info(
         """
     **Vui lòng upload đúng loại báo cáo và đúng kỳ dữ liệu.**  

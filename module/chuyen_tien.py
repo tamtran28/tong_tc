@@ -15,9 +15,6 @@ def _safe_colname(s: str) -> str:
 
 
 def run_chuyen_tien():
-
-    st.header("🏦 MỤC 09 – TỔNG HỢP CHUYỂN TIỀN (3 NĂM)")
-
     uploaded = st.file_uploader(
         "📁 Upload file Mục 09 (Chuyển tiền)",
         type=["xls", "xlsx"]

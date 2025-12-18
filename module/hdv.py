@@ -77,8 +77,6 @@ def filter_by_sol_contains(df: pd.DataFrame, col: str, pattern: str) -> pd.DataF
 # ==========================================================
 
 def run_hdv():
-    st.header("💳 PHÂN HỆ HDV – 3 TIÊU CHÍ")
-
     st.markdown(
         """
 Gồm:

@@ -7,7 +7,7 @@ from db.login_logs import log_login
 
 
 def show_login_page():
-    st.title("🔐 ĐĂNG NHẬP CHƯƠNG TRÌNH CHỌN MẪU")
+    st.title("🔐 ĐĂNG NHẬP CHƯƠNG TRÌNH")
 
     with st.form("login_form", clear_on_submit=False):
         username = st.text_input("Tên đăng nhập")

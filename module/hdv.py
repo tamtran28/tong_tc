@@ -79,7 +79,7 @@ def filter_by_sol_contains(df: pd.DataFrame, col: str, pattern: str) -> pd.DataF
 def run_hdv():
     st.markdown(
         """
-Gồm:
+Các file uplod gồm:
 - **TC1**: HDV CKH + so sánh FTP + LS thực trả  
 - **TC2**: Xếp hạng KH theo số dư  
 - **TC3**: Giao dịch tiền gửi rút – mở/rút trong ngày  

@@ -115,9 +115,6 @@ def process_tkhq_data(df: pd.DataFrame, ngay_kiem_toan: pd.Timestamp) -> pd.Data
 # ============================================================
 
 def run_to_khai_hq() -> None:
-
-    st.title("📊 Phân tích Tờ khai Hải quan (TKHQ)")
-
     # Sidebar
     with st.sidebar:
         st.header("📁 Tải dữ liệu")

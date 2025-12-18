@@ -194,9 +194,8 @@ def run_module_pos():
 
 
 def _run_module_pos():
-    # user = require_role(["admin", "pos"]) 
-    st.title("🏧 TIÊU CHÍ POS – Mục 6, 7, 8")
-
+    
+    
     st.markdown("**Upload 3 file: 6.2a trước 23/05, 6.2a sau 23/05, 6.2b (MUC51)**")
 
     start_date = st.date_input("Ngày bắt đầu THKT", value=date(2025, 1, 1))

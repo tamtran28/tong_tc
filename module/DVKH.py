@@ -577,7 +577,7 @@ def run_dvkh_5_tieuchi():
 
 
 def _run_dvkh_5_tieuchi():
-    st.title("👥 DVKH — 5 tiêu chí (Ủy quyền, SMS/SCM, HDV, Mapping)")
+    #st.title("👥 DVKH — 5 tiêu chí (Ủy quyền, SMS/SCM, HDV, Mapping)")
 
     user = get_current_user() or {"username": "unknown"}
 

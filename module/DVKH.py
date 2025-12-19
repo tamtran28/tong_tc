@@ -653,13 +653,13 @@ def _run_dvkh_5_tieuchi():
     # TAB 2
     with tab2:
         st.header("B. Tiêu chí 4 & 5 (42a / Mapping)")
-        st.info("Upload: HDV_CHITIET_KKH (nhiều file .xls/.xlsx), BC_LAY_CHARGELEVELCODE..., 10_Danh sach nhan su..., DS nghi viec..., Mapping_1405.xlsx")
+        st.info("Upload: HDV_CHITIET_KKH (nhiều file .xls/.xlsx), BC_LAY_CHARGELEVELCODE..., 10_Danh sach nhan su..., DS nghi viec..., Mapping_sol.xlsx")
         files_42a_upload = st.file_uploader("HDV_CHITIET_KKH_*.xls (multiple) OR upload zip containing many Excel", type=["zip","xls","xlsx"], accept_multiple_files=False, key="dvkh_tab2_42a")
         file_42b_upload = st.file_uploader("BC_LAY_CHARGELEVELCODE_THEO_KHCN (excel)", type=["xls","xlsx"], key="dvkh_tab2_42b")
         file_42c_upload = st.file_uploader("10_Danh sach nhan su_T*.xlsx", type=["xls","xlsx"], key="dvkh_tab2_42c")
-        file_42d_upload = st.file_uploader("2.DS..._nghi_viec.xlsx", type=["xls","xlsx"], key="dvkh_tab2_42d")
-        file_mapping_upload = st.file_uploader("Mapping_1405.xlsx", type=["xls","xlsx"], key="dvkh_tab2_map")
-        chi_nhanh = st.text_input("Nhập tên chi nhánh hoặc mã SOL để lọc (VD: HANOI hoặc 1405)").strip().upper()
+        file_42d_upload = st.file_uploader("2.Danh_sach_nghi_viec.xlsx", type=["xls","xlsx"], key="dvkh_tab2_42d")
+        file_mapping_upload = st.file_uploader("Mapping_sol.xlsx", type=["xls","xlsx"], key="dvkh_tab2_map")
+        chi_nhanh = st.text_input("Nhập mã SOL để lọc (VD: 1405)").strip().upper()
 
         if st.button("Chạy Tiêu chí 4-5"):
             if not (files_42a_upload and file_42b_upload and file_42c_upload and file_42d_upload and file_mapping_upload and chi_nhanh):

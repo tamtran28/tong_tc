@@ -703,24 +703,60 @@ def _run_dvkh_5_tieuchi():
                     st.exception(e)
                     audit_log("run_tieuchi_4_5_error", str(e), user)
 
-    # Audit viewer
-    st.markdown("---")
-    st.header("Audit & Logs")
-    st.write("Nhật ký hoạt động DVKH (local file):")
-    if os.path.exists(AUDIT_FILE):
-        try:
-            df_audit = pd.read_csv(AUDIT_FILE)
-            st.dataframe(df_audit.sort_values("timestamp", ascending=False).head(200))
-            csv_bytes = df_audit.to_csv(index=False).encode("utf-8-sig")
-            st.download_button("Tải Log Audit (CSV)", data=csv_bytes, file_name="dvkh_audit.csv", mime="text/csv")
-        except Exception as e:
-            st.error("Không thể đọc file audit.")
-            st.exception(e)
-    else:
-        st.info("Chưa có log hoạt động (file dvkh_audit.csv chưa tồn tại).")
+    # # Audit viewer
+    # st.markdown("---")
+    # st.header("Audit & Logs")
+    # st.write("Nhật ký hoạt động DVKH (local file):")
+    # if os.path.exists(AUDIT_FILE):
+    #     try:
+    #         df_audit = pd.read_csv(AUDIT_FILE)
+    #         st.dataframe(df_audit.sort_values("timestamp", ascending=False).head(200))
+    #         csv_bytes = df_audit.to_csv(index=False).encode("utf-8-sig")
+    #         st.download_button("Tải Log Audit (CSV)", data=csv_bytes, file_name="dvkh_audit.csv", mime="text/csv")
+    #     except Exception as e:
+    #         st.error("Không thể đọc file audit.")
+    #         st.exception(e)
+    # else:
+    #     st.info("Chưa có log hoạt động (file dvkh_audit.csv chưa tồn tại).")
 
-    st.markdown("---")
-    st.info("Module DVKH — hoàn tất. Liên hệ admin khi cần thêm rule / cột bổ sung.")
+    # st.markdown("---")
+    # st.info("Module DVKH — hoàn tất. Liên hệ admin khi cần thêm rule / cột bổ sung.")
+    # =========================
+
+    # AUDIT VIEWER (ADMIN ONLY)
+    # =========================
+    
+    if st.session_state.get("role") == "admin":
+    
+        st.markdown("---")
+        st.header("🔐 Audit & Logs (Admin)")
+    
+        st.write("Nhật ký hoạt động DVKH (local file):")
+    
+        if os.path.exists(AUDIT_FILE):
+            try:
+                df_audit = pd.read_csv(AUDIT_FILE)
+                st.dataframe(
+                    df_audit.sort_values("timestamp", ascending=False).head(200),
+                    use_container_width=True,
+                )
+    
+                csv_bytes = df_audit.to_csv(index=False).encode("utf-8-sig")
+                st.download_button(
+                    "📥 Tải Log Audit (CSV)",
+                    data=csv_bytes,
+                    file_name="dvkh_audit.csv",
+                    mime="text/csv",
+                )
+            except Exception as e:
+                st.error("❌ Không thể đọc file audit.")
+                st.exception(e)
+        else:
+            st.info("ℹ️ Chưa có log hoạt động (file dvkh_audit.csv chưa tồn tại).")
+    
+    else:
+        # Ẩn hoàn toàn, hoặc chỉ hiển thị thông báo nhẹ
+        st.caption("🔒 Audit & Logs chỉ dành cho Admin.")
 
 
 # # module/DVKH.py

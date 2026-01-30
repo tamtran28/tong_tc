@@ -640,7 +640,7 @@ def _run_module_the():
     with col_param1:
         chi_nhanh = st.text_input(
             "Nhập tên chi nhánh hoặc mã SOL (VD: HANOI, 007)",
-            value="HANOI",
+            value="",
         ).strip()
 
     with col_param2:

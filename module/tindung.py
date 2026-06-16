@@ -387,8 +387,16 @@ def process_data(
                 )
                 pivot_full = pivot_full.merge(df_lc_sum, on="CIF_KH_VAY", how="left")
 
-            pivot_full["DƯ_NỢ_BẢO_LÃNH"] = pivot_full.get("DƯ_NỢ_BẢO_LÃNH", 0).fillna(0)
-            pivot_full["DƯ_NỢ_LC"] = pivot_full.get("DƯ_NỢ_LC", 0).fillna(0)
+            # FIX: Kiểm tra cột tồn tại trước khi gọi fillna()
+            if "DƯ_NỢ_BẢO_LÃNH" in pivot_full.columns:
+                pivot_full["DƯ_NỢ_BẢO_LÃNH"] = pivot_full["DƯ_NỢ_BẢO_LÃNH"].fillna(0)
+            else:
+                pivot_full["DƯ_NỢ_BẢO_LÃNH"] = 0
+
+            if "DƯ_NỢ_LC" in pivot_full.columns:
+                pivot_full["DƯ_NỢ_LC"] = pivot_full["DƯ_NỢ_LC"].fillna(0)
+            else:
+                pivot_full["DƯ_NỢ_LC"] = 0
 
         st.write("✅ BẢO LÃNH & LC xong")
 

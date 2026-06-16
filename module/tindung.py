@@ -85,7 +85,7 @@ def process_data(
         # 1. Lọc theo chi nhánh
         # =======================================================
         st.write(f"🔍 Lọc theo chi nhánh: {chi_nhanh}")
-
+        
         if "BRANCH_VAY" not in df_crm4.columns:
             raise UserFacingError("❌ CRM4 thiếu cột 'BRANCH_VAY'")
         if "BRCD" not in df_crm32.columns:
@@ -97,10 +97,10 @@ def process_data(
         df_crm32_filtered = df_crm32[
             df_crm32["BRCD"].astype(str).str.upper().str.contains(chi_nhanh, na=False)
         ].copy()
-
+        
         st.write(f"✅ CRM4 sau lọc: {len(df_crm4_filtered)} dòng")
         st.write(f"✅ CRM32 sau lọc: {len(df_crm32_filtered)} dòng")
-
+        
         if len(df_crm4_filtered) == 0:
             raise UserFacingError(f"❌ Không tìm thấy dữ liệu CRM4 với chi nhánh '{chi_nhanh}'")
         if len(df_crm32_filtered) == 0:
@@ -110,7 +110,7 @@ def process_data(
         # 2. GÁN LOẠI TSBD TỪ BẢNG CODE
         # =======================================================
         st.write("🔄 Gán loại TSBD...")
-
+        
         if "CODE CAP 2" not in df_code_tsbd.columns or "CODE" not in df_code_tsbd.columns:
             st.write(f"⚠️ Cột CODE_TSBD: {list(df_code_tsbd.columns)}")
             raise UserFacingError("❌ File CODE_LOAI_TSBD thiếu cột 'CODE CAP 2' hoặc 'CODE'")
@@ -192,7 +192,7 @@ def process_data(
         st.write("🔄 Merge thông tin CIF...")
         required_cols = ["CIF_KH_VAY", "NHOM_NO"]
         optional_cols = ["TEN_KH_VAY", "CUSTTPCD"]
-
+        
         cols_to_use = [c for c in required_cols + optional_cols if c in df_crm4_filtered.columns]
         if "CIF_KH_VAY" not in cols_to_use or "NHOM_NO" not in cols_to_use:
             raise UserFacingError("❌ CRM4 thiếu cột 'CIF_KH_VAY' hoặc 'NHOM_NO'")
@@ -226,7 +226,7 @@ def process_data(
         # 3. CRM32 + MỤC ĐÍCH VAY
         # =======================================================
         st.write("🔄 Xử lý CRM32...")
-
+        
         df_crm32_filtered = df_crm32_filtered.copy()
 
         if "CAP_PHE_DUYET" in df_crm32_filtered.columns:
@@ -243,7 +243,7 @@ def process_data(
             df_crm32_filtered["MA_PHE_DUYET"] = ""
 
         ma_cap_c = [f"{i:02d}" for i in range(1, 8)] + [f"{i:02d}" for i in range(28, 32)]
-
+        
         if "MA_PHE_DUYET" in df_crm32_filtered.columns and "CUSTSEQLN" in df_crm32_filtered.columns:
             list_cif_cap_c = df_crm32_filtered[
                 df_crm32_filtered["MA_PHE_DUYET"].isin(ma_cap_c)
@@ -318,21 +318,22 @@ def process_data(
         st.write("✅ Pivot CRM32 xong")
 
         # ========== TIẾP TỤC CÁC PHẦN KHÁC ==========
+        # Phần này sẽ giữ nguyên từ code cũ vì nó tương đối ổn định
+
         # Lệch dư nợ
-        st.write("🔄 Xử lý lệch dư nợ...")
         if "DƯ NỢ" in pivot_full.columns and "DƯ NỢ CRM32" in pivot_full.columns:
             pivot_full["LECH"] = pivot_full["DƯ NỢ"] - pivot_full["DƯ NỢ CRM32"]
             cif_lech = pivot_full[pivot_full["LECH"] != 0]["CIF_KH_VAY"].unique()
         else:
             cif_lech = []
 
-        # FIX: Kiểm tra cột tồn tại trước khi access
-        if "LOAI" in df_crm4_filtered.columns and "DU_NO_PHAN_BO_QUY_DOI" in df_crm4_filtered.columns and len(cif_lech) > 0:
+        # Bổ sung dư nợ (blank)
+        if "LOAI" in df_crm4_filtered.columns and "DU_NO_PHAN_BO_QUY_DOI" in df_crm4_filtered.columns:
             df_crm4_blank = df_crm4_filtered[
                 ~df_crm4_filtered["LOAI"].isin(["Cho vay", "Bao lanh", "LC"])
             ].copy()
 
-            if len(df_crm4_blank) > 0:
+            if len(df_crm4_blank) > 0 and len(cif_lech) > 0:
                 du_no_bosung = (
                     df_crm4_blank[df_crm4_blank["CIF_KH_VAY"].isin(cif_lech)]
                     .groupby("CIF_KH_VAY", as_index=False)["DU_NO_PHAN_BO_QUY_DOI"]
@@ -340,15 +341,10 @@ def process_data(
                     .rename(columns={"DU_NO_PHAN_BO_QUY_DOI": "(blank)"})
                 )
 
-                if len(du_no_bosung) > 0:  # FIX: Kiểm tra du_no_bosung không rỗng
-                    pivot_full = pivot_full.merge(du_no_bosung, on="CIF_KH_VAY", how="left")
-                    # FIX: Chỉ access "(blank)" nếu nó tồn tại
-                    if "(blank)" in pivot_full.columns:
-                        pivot_full["(blank)"] = pivot_full["(blank)"].fillna(0)
-                        if "DƯ NỢ CRM32" in pivot_full.columns:
-                            pivot_full["DƯ NỢ CRM32"] = pivot_full["DƯ NỢ CRM32"] + pivot_full["(blank)"]
-
-        st.write("✅ Lệch dư nợ xong")
+                pivot_full = pivot_full.merge(du_no_bosung, on="CIF_KH_VAY", how="left")
+                pivot_full["(blank)"] = pivot_full["(blank)"].fillna(0)
+                if "DƯ NỢ CRM32" in pivot_full.columns:
+                    pivot_full["DƯ NỢ CRM32"] = pivot_full["DƯ NỢ CRM32"] + pivot_full["(blank)"]
 
         # Nợ nhóm 2 / Nợ xấu
         if "NHOM_NO" in pivot_full.columns:
@@ -387,16 +383,21 @@ def process_data(
                 )
                 pivot_full = pivot_full.merge(df_lc_sum, on="CIF_KH_VAY", how="left")
 
-            # FIX: Kiểm tra cột tồn tại trước khi gọi fillna()
-            if "DƯ_NỢ_BẢO_LÃNH" in pivot_full.columns:
-                pivot_full["DƯ_NỢ_BẢO_LÃNH"] = pivot_full["DƯ_NỢ_BẢO_LÃNH"].fillna(0)
-            else:
+            # Không dùng DataFrame.get(..., 0).fillna(0), vì khi cột
+            # chưa tồn tại, giá trị trả về là số nguyên 0 và không có fillna().
+            if "DƯ_NỢ_BẢO_LÃNH" not in pivot_full.columns:
                 pivot_full["DƯ_NỢ_BẢO_LÃNH"] = 0
-
-            if "DƯ_NỢ_LC" in pivot_full.columns:
-                pivot_full["DƯ_NỢ_LC"] = pivot_full["DƯ_NỢ_LC"].fillna(0)
             else:
+                pivot_full["DƯ_NỢ_BẢO_LÃNH"] = pd.to_numeric(
+                    pivot_full["DƯ_NỢ_BẢO_LÃNH"], errors="coerce"
+                ).fillna(0)
+
+            if "DƯ_NỢ_LC" not in pivot_full.columns:
                 pivot_full["DƯ_NỢ_LC"] = 0
+            else:
+                pivot_full["DƯ_NỢ_LC"] = pd.to_numeric(
+                    pivot_full["DƯ_NỢ_LC"], errors="coerce"
+                ).fillna(0)
 
         st.write("✅ BẢO LÃNH & LC xong")
 
@@ -557,28 +558,91 @@ def process_data(
 
         if len(df_tt) > 0 or len(df_gn) > 0:
             df_gop = pd.concat([df_tt, df_gn], ignore_index=True)
-            df_gop = df_gop[df_gop["NGAY"].notna()]
-            df_gop = df_gop.sort_values(by=["CIF", "NGAY", "GIAI_NGAN_TT"])
 
-            df_count = (
-                df_gop.groupby(["CIF", "NGAY", "GIAI_NGAN_TT"])
-                .size()
-                .unstack(fill_value=0)
-                .reset_index()
-            )
-            df_count["CO_CA_GN_VA_TT"] = (
-                (df_count.get("Giải ngân", 0) > 0) & (df_count.get("Tất toán", 0) > 0)
-            ).astype(int)
+            # Chỉ giữ các dòng có ngày hợp lệ
+            df_gop = df_gop[df_gop["NGAY"].notna()].copy()
 
-            df_count["CIF"] = df_count["CIF"].astype(str)
-            df_gop["CIF"] = df_gop["CIF"].astype(str)
+            # Chuẩn hóa CIF để tránh lệch kiểu 123 và 123.0
+            if "CIF" in df_gop.columns:
+                df_gop["CIF"] = (
+                    df_gop["CIF"]
+                    .astype(str)
+                    .str.strip()
+                    .str.replace(r"\\.0$", "", regex=True)
+                )
 
-            ds_ca_gn_tt = df_count[df_count["CO_CA_GN_VA_TT"] == 1]["CIF"].astype(str).unique()
+            if not df_gop.empty:
+                df_gop = df_gop.sort_values(
+                    by=["CIF", "NGAY", "GIAI_NGAN_TT"]
+                )
 
-            pivot_full["CIF_KH_VAY"] = pivot_full["CIF_KH_VAY"].astype(str)
-            pivot_full["KH có cả GNG và TT trong 1 ngày"] = pivot_full["CIF_KH_VAY"].apply(
-                lambda x: "x" if x in ds_ca_gn_tt else ""
-            )
+                df_count = (
+                    df_gop.groupby(
+                        ["CIF", "NGAY", "GIAI_NGAN_TT"],
+                        dropna=False
+                    )
+                    .size()
+                    .unstack(fill_value=0)
+                    .reset_index()
+                )
+
+                # Sau unstack có thể chỉ xuất hiện một trong hai cột.
+                # Luôn tạo đủ cột để phép so sánh trả về Series, không phải bool.
+                if "Giải ngân" not in df_count.columns:
+                    df_count["Giải ngân"] = 0
+
+                if "Tất toán" not in df_count.columns:
+                    df_count["Tất toán"] = 0
+
+                df_count["Giải ngân"] = pd.to_numeric(
+                    df_count["Giải ngân"], errors="coerce"
+                ).fillna(0)
+
+                df_count["Tất toán"] = pd.to_numeric(
+                    df_count["Tất toán"], errors="coerce"
+                ).fillna(0)
+
+                df_count["CO_CA_GN_VA_TT"] = (
+                    (df_count["Giải ngân"] > 0)
+                    & (df_count["Tất toán"] > 0)
+                ).astype("int64")
+
+                df_count["CIF"] = (
+                    df_count["CIF"]
+                    .astype(str)
+                    .str.strip()
+                    .str.replace(r"\\.0$", "", regex=True)
+                )
+
+                ds_ca_gn_tt = (
+                    df_count.loc[
+                        df_count["CO_CA_GN_VA_TT"] == 1,
+                        "CIF"
+                    ]
+                    .dropna()
+                    .astype(str)
+                    .unique()
+                )
+
+                pivot_full["CIF_KH_VAY"] = (
+                    pivot_full["CIF_KH_VAY"]
+                    .astype(str)
+                    .str.strip()
+                    .str.replace(r"\\.0$", "", regex=True)
+                )
+
+                pivot_full["KH có cả GNG và TT trong 1 ngày"] = np.where(
+                    pivot_full["CIF_KH_VAY"].isin(ds_ca_gn_tt),
+                    "x",
+                    ""
+                )
+            else:
+                df_count = pd.DataFrame()
+                pivot_full["KH có cả GNG và TT trong 1 ngày"] = ""
+        else:
+            df_gop = pd.DataFrame()
+            df_count = pd.DataFrame()
+            pivot_full["KH có cả GNG và TT trong 1 ngày"] = ""
 
         st.write("✅ MỤC 55 & 56 xong")
 
@@ -640,11 +704,23 @@ def process_data(
 
                         df_dem = df_unique.groupby(["CIF_ID", "CAP_CHAM_TRA"]).size().unstack(fill_value=0)
 
+                        # unstack có thể không tạo đủ các cột phân nhóm.
+                        # Tạo cột mặc định để tránh phép so sánh trả về bool đơn.
+                        if ">=10" not in df_dem.columns:
+                            df_dem[">=10"] = 0
+
+                        if "4-9" not in df_dem.columns:
+                            df_dem["4-9"] = 0
+
                         df_dem["KH Phát sinh chậm trả > 10 ngày"] = np.where(
-                            df_dem.get(">=10", 0) > 0, "x", ""
+                            df_dem[">=10"] > 0,
+                            "x",
+                            ""
                         )
                         df_dem["KH Phát sinh chậm trả 4-9 ngày"] = np.where(
-                            (df_dem.get(">=10", 0) == 0) & (df_dem.get("4-9", 0) > 0), "x", ""
+                            (df_dem[">=10"] == 0) & (df_dem["4-9"] > 0),
+                            "x",
+                            ""
                         )
 
                         pivot_full["CIF_KH_VAY"] = pivot_full["CIF_KH_VAY"].astype(str)

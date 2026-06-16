@@ -85,7 +85,7 @@ def process_data(
         # 1. Lọc theo chi nhánh
         # =======================================================
         st.write(f"🔍 Lọc theo chi nhánh: {chi_nhanh}")
-        
+
         if "BRANCH_VAY" not in df_crm4.columns:
             raise UserFacingError("❌ CRM4 thiếu cột 'BRANCH_VAY'")
         if "BRCD" not in df_crm32.columns:
@@ -97,10 +97,10 @@ def process_data(
         df_crm32_filtered = df_crm32[
             df_crm32["BRCD"].astype(str).str.upper().str.contains(chi_nhanh, na=False)
         ].copy()
-        
+
         st.write(f"✅ CRM4 sau lọc: {len(df_crm4_filtered)} dòng")
         st.write(f"✅ CRM32 sau lọc: {len(df_crm32_filtered)} dòng")
-        
+
         if len(df_crm4_filtered) == 0:
             raise UserFacingError(f"❌ Không tìm thấy dữ liệu CRM4 với chi nhánh '{chi_nhanh}'")
         if len(df_crm32_filtered) == 0:
@@ -110,7 +110,7 @@ def process_data(
         # 2. GÁN LOẠI TSBD TỪ BẢNG CODE
         # =======================================================
         st.write("🔄 Gán loại TSBD...")
-        
+
         if "CODE CAP 2" not in df_code_tsbd.columns or "CODE" not in df_code_tsbd.columns:
             st.write(f"⚠️ Cột CODE_TSBD: {list(df_code_tsbd.columns)}")
             raise UserFacingError("❌ File CODE_LOAI_TSBD thiếu cột 'CODE CAP 2' hoặc 'CODE'")
@@ -192,7 +192,7 @@ def process_data(
         st.write("🔄 Merge thông tin CIF...")
         required_cols = ["CIF_KH_VAY", "NHOM_NO"]
         optional_cols = ["TEN_KH_VAY", "CUSTTPCD"]
-        
+
         cols_to_use = [c for c in required_cols + optional_cols if c in df_crm4_filtered.columns]
         if "CIF_KH_VAY" not in cols_to_use or "NHOM_NO" not in cols_to_use:
             raise UserFacingError("❌ CRM4 thiếu cột 'CIF_KH_VAY' hoặc 'NHOM_NO'")
@@ -226,7 +226,7 @@ def process_data(
         # 3. CRM32 + MỤC ĐÍCH VAY
         # =======================================================
         st.write("🔄 Xử lý CRM32...")
-        
+
         df_crm32_filtered = df_crm32_filtered.copy()
 
         if "CAP_PHE_DUYET" in df_crm32_filtered.columns:
@@ -243,7 +243,7 @@ def process_data(
             df_crm32_filtered["MA_PHE_DUYET"] = ""
 
         ma_cap_c = [f"{i:02d}" for i in range(1, 8)] + [f"{i:02d}" for i in range(28, 32)]
-        
+
         if "MA_PHE_DUYET" in df_crm32_filtered.columns and "CUSTSEQLN" in df_crm32_filtered.columns:
             list_cif_cap_c = df_crm32_filtered[
                 df_crm32_filtered["MA_PHE_DUYET"].isin(ma_cap_c)
@@ -318,22 +318,21 @@ def process_data(
         st.write("✅ Pivot CRM32 xong")
 
         # ========== TIẾP TỤC CÁC PHẦN KHÁC ==========
-        # Phần này sẽ giữ nguyên từ code cũ vì nó tương đối ổn định
-
         # Lệch dư nợ
+        st.write("🔄 Xử lý lệch dư nợ...")
         if "DƯ NỢ" in pivot_full.columns and "DƯ NỢ CRM32" in pivot_full.columns:
             pivot_full["LECH"] = pivot_full["DƯ NỢ"] - pivot_full["DƯ NỢ CRM32"]
             cif_lech = pivot_full[pivot_full["LECH"] != 0]["CIF_KH_VAY"].unique()
         else:
             cif_lech = []
 
-        # Bổ sung dư nợ (blank)
-        if "LOAI" in df_crm4_filtered.columns and "DU_NO_PHAN_BO_QUY_DOI" in df_crm4_filtered.columns:
+        # FIX: Kiểm tra cột tồn tại trước khi access
+        if "LOAI" in df_crm4_filtered.columns and "DU_NO_PHAN_BO_QUY_DOI" in df_crm4_filtered.columns and len(cif_lech) > 0:
             df_crm4_blank = df_crm4_filtered[
                 ~df_crm4_filtered["LOAI"].isin(["Cho vay", "Bao lanh", "LC"])
             ].copy()
 
-            if len(df_crm4_blank) > 0 and len(cif_lech) > 0:
+            if len(df_crm4_blank) > 0:
                 du_no_bosung = (
                     df_crm4_blank[df_crm4_blank["CIF_KH_VAY"].isin(cif_lech)]
                     .groupby("CIF_KH_VAY", as_index=False)["DU_NO_PHAN_BO_QUY_DOI"]
@@ -341,10 +340,15 @@ def process_data(
                     .rename(columns={"DU_NO_PHAN_BO_QUY_DOI": "(blank)"})
                 )
 
-                pivot_full = pivot_full.merge(du_no_bosung, on="CIF_KH_VAY", how="left")
-                pivot_full["(blank)"] = pivot_full["(blank)"].fillna(0)
-                if "DƯ NỢ CRM32" in pivot_full.columns:
-                    pivot_full["DƯ NỢ CRM32"] = pivot_full["DƯ NỢ CRM32"] + pivot_full["(blank)"]
+                if len(du_no_bosung) > 0:  # FIX: Kiểm tra du_no_bosung không rỗng
+                    pivot_full = pivot_full.merge(du_no_bosung, on="CIF_KH_VAY", how="left")
+                    # FIX: Chỉ access "(blank)" nếu nó tồn tại
+                    if "(blank)" in pivot_full.columns:
+                        pivot_full["(blank)"] = pivot_full["(blank)"].fillna(0)
+                        if "DƯ NỢ CRM32" in pivot_full.columns:
+                            pivot_full["DƯ NỢ CRM32"] = pivot_full["DƯ NỢ CRM32"] + pivot_full["(blank)"]
+
+        st.write("✅ Lệch dư nợ xong")
 
         # Nợ nhóm 2 / Nợ xấu
         if "NHOM_NO" in pivot_full.columns:

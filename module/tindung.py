@@ -476,18 +476,38 @@ def process_data(
     df_55 = pd.read_excel(df_55_file_upload)
     df_56 = pd.read_excel(df_56_file_upload)
 
-    df_tt = df_55[
-        [
-            "CIF_ID",
-            "TEN_KH",
-            "KHE_UOC",
-            "SO_TIEN_QD",
-            "NGAY_GIAI_NGAN",
-            "NGAY_DAO_HAN",
-            "NGAY_TT",
-            "LOAITIEN",
-        ]
-    ].copy()
+    # Chuẩn hóa tên cột Mục 55:
+    # Có file dùng LOAITIEN, có file dùng LOAI_TIEN
+    df_55.columns = df_55.columns.astype(str).str.strip()
+
+    if "LOAITIEN" not in df_55.columns and "LOAI_TIEN" in df_55.columns:
+        df_55 = df_55.rename(columns={"LOAI_TIEN": "LOAITIEN"})
+
+    required_cols_55 = [
+        "CIF_ID",
+        "TEN_KH",
+        "KHE_UOC",
+        "SO_TIEN_QD",
+        "NGAY_GIAI_NGAN",
+        "NGAY_DAO_HAN",
+        "NGAY_TT",
+        "LOAITIEN",
+    ]
+
+    missing_cols_55 = [
+        col for col in required_cols_55
+        if col not in df_55.columns
+    ]
+
+    if missing_cols_55:
+        raise ValueError(
+            "File Mục 55 thiếu cột: "
+            + ", ".join(missing_cols_55)
+            + ". Các cột hiện có: "
+            + ", ".join(map(str, df_55.columns.tolist()))
+        )
+
+    df_tt = df_55[required_cols_55].copy()
     df_tt.columns = [
         "CIF",
         "TEN_KHACH_HANG",

@@ -7,6 +7,7 @@ import streamlit as st
 import pandas as pd
 import numpy as np
 import io
+import traceback
 
 from module.error_utils import UserFacingError, _should_reraise
 
@@ -861,21 +862,77 @@ def _run_tin_dung():
             st.error("❌ Thiếu dữ liệu/thiết lập: " + ", ".join(missing))
             return
 
-        with st.spinner("Đang xử lý dữ liệu..."):
-            results = process_data(
-                crm4_files,
-                crm32_files,
-                df_muc_dich_file_upload,
-                df_code_tsbd_file_upload,
-                df_giai_ngan_file_upload,
-                df_sol_file_upload,
-                df_55_file_upload,
-                df_56_file_upload,
-                df_57_file_upload,
-                chi_nhanh,
-                ngay_danh_gia,
-                dia_ban_kt,
+        try:
+            with st.spinner("Đang xử lý dữ liệu..."):
+                results = process_data(
+                    crm4_files,
+                    crm32_files,
+                    df_muc_dich_file_upload,
+                    df_code_tsbd_file_upload,
+                    df_giai_ngan_file_upload,
+                    df_sol_file_upload,
+                    df_55_file_upload,
+                    df_56_file_upload,
+                    df_57_file_upload,
+                    chi_nhanh,
+                    ngay_danh_gia,
+                    dia_ban_kt,
+                )
+
+        except KeyError as exc:
+            # Thường xảy ra khi file sai mẫu hoặc thiếu tên cột
+            missing_col = str(exc).strip("'\"")
+            st.error(
+                f"❌ Không tìm thấy cột **{missing_col}** trong file dữ liệu. "
+                "Vui lòng kiểm tra đúng loại báo cáo, đúng sheet và tên cột."
             )
+            st.info(
+                "Gợi ý: mở file Excel và kiểm tra hàng tiêu đề có đúng tên cột, "
+                "không bị dư khoảng trắng, đổi tên hoặc đặt ở sheet khác."
+            )
+            with st.expander("🔎 Xem chi tiết lỗi kỹ thuật"):
+                st.code(traceback.format_exc())
+            return
+
+        except pd.errors.EmptyDataError:
+            st.error(
+                "❌ Có file không chứa dữ liệu hoặc sheet đầu tiên đang trống. "
+                "Vui lòng kiểm tra lại file đã upload."
+            )
+            with st.expander("🔎 Xem chi tiết lỗi kỹ thuật"):
+                st.code(traceback.format_exc())
+            return
+
+        except ValueError as exc:
+            st.error(f"❌ Dữ liệu hoặc cấu trúc file không hợp lệ: {exc}")
+            st.info(
+                "Vui lòng kiểm tra định dạng ngày, kiểu dữ liệu, tên sheet "
+                "và việc upload đúng loại báo cáo."
+            )
+            with st.expander("🔎 Xem chi tiết lỗi kỹ thuật"):
+                st.code(traceback.format_exc())
+            return
+
+        except ImportError as exc:
+            st.error(
+                f"❌ Thiếu thư viện để đọc file Excel: {exc}. "
+                "Với file .xls cần cài `xlrd`; với file .xlsx cần `openpyxl`."
+            )
+            with st.expander("🔎 Xem chi tiết lỗi kỹ thuật"):
+                st.code(traceback.format_exc())
+            return
+
+        except Exception as exc:
+            st.error(
+                f"❌ Xử lý thất bại: **{type(exc).__name__}** – {exc}"
+            )
+            st.warning(
+                "Hãy kiểm tra đúng mẫu file, tên cột, sheet đầu tiên, "
+                "mã SOL và dữ liệu ngày."
+            )
+            with st.expander("🔎 Xem toàn bộ chi tiết lỗi kỹ thuật"):
+                st.code(traceback.format_exc())
+            return
 
         st.success("✅ Đã xử lý xong!")
 

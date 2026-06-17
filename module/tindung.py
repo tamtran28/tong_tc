@@ -212,30 +212,91 @@ def process_data(
     pivot_full = pivot_final.merge(pivot_final_CRM32, on="CIF_KH_VAY", how="left")
     pivot_full.fillna(0, inplace=True)
 
-    # Lệch dư nợ
-    pivot_full["LECH"] = pivot_full["DƯ NỢ"] - pivot_full["DƯ NỢ CRM32"]
-    pivot_full["LECH"] = pivot_full["LECH"].fillna(0)
-    cif_lech = pivot_full[pivot_full["LECH"] != 0]["CIF_KH_VAY"].unique()
+    # =======================================================
+    # 3.1. ĐỐI CHIẾU DƯ NỢ CRM4 - CRM32 VÀ BỔ SUNG (blank)
+    # =======================================================
 
-    # Bổ sung dư nợ (blank) từ CRM4 các khoản khác cho vay/BL/LC
-    df_crm4_blank = df_crm4_filtered[
-        ~df_crm4_filtered["LOAI"].isin(["Cho vay", "Bao lanh", "LC"])
+    # Chuẩn hóa dữ liệu số để tránh lỗi khi trừ/cộng
+    pivot_full["DƯ NỢ"] = pd.to_numeric(
+        pivot_full["DƯ NỢ"], errors="coerce"
+    ).fillna(0)
+
+    pivot_full["DƯ NỢ CRM32"] = pd.to_numeric(
+        pivot_full["DƯ NỢ CRM32"], errors="coerce"
+    ).fillna(0)
+
+    df_crm4_filtered["DU_NO_PHAN_BO_QUY_DOI"] = pd.to_numeric(
+        df_crm4_filtered["DU_NO_PHAN_BO_QUY_DOI"], errors="coerce"
+    ).fillna(0)
+
+    # Xóa các cột có thể còn lại từ lần xử lý/merge trước
+    # để tránh phát sinh (blank)_x và (blank)_y
+    old_blank_cols = ["(blank)", "(blank)_x", "(blank)_y", "LECH"]
+    pivot_full = pivot_full.drop(
+        columns=[col for col in old_blank_cols if col in pivot_full.columns],
+        errors="ignore",
+    )
+
+    # 1. Tính chênh lệch trước khi bổ sung
+    pivot_full["LECH"] = (
+        pivot_full["DƯ NỢ"] - pivot_full["DƯ NỢ CRM32"]
+    ).fillna(0)
+
+    # Dùng ngưỡng nhỏ để tránh lệch do số thực
+    cif_lech = (
+        pivot_full.loc[
+            pivot_full["LECH"].abs() > 0.01,
+            "CIF_KH_VAY",
+        ]
+        .dropna()
+        .unique()
+    )
+
+    # 2. Lấy các khoản CRM4 không thuộc Cho vay/Bảo lãnh/LC
+    df_crm4_blank = df_crm4_filtered.loc[
+        ~df_crm4_filtered["LOAI"]
+        .astype(str)
+        .str.strip()
+        .isin(["Cho vay", "Bao lanh", "LC"])
     ].copy()
 
+    # 3. Tổng dư nợ bổ sung theo CIF đang bị lệch
     du_no_bosung = (
-        df_crm4_blank[df_crm4_blank["CIF_KH_VAY"].isin(cif_lech)]
+        df_crm4_blank.loc[
+            df_crm4_blank["CIF_KH_VAY"].isin(cif_lech)
+        ]
         .groupby("CIF_KH_VAY", as_index=False)["DU_NO_PHAN_BO_QUY_DOI"]
         .sum()
         .rename(columns={"DU_NO_PHAN_BO_QUY_DOI": "(blank)"})
     )
 
-    pivot_full = pivot_full.merge(du_no_bosung, on="CIF_KH_VAY", how="left")
-    pivot_full["(blank)"] = pivot_full["(blank)"].fillna(0)
-    pivot_full["DƯ NỢ CRM32"] = pivot_full["DƯ NỢ CRM32"] + pivot_full["(blank)"]
+    # 4. Merge an toàn: mỗi CIF trong bảng bổ sung chỉ có một dòng
+    pivot_full = pivot_full.merge(
+        du_no_bosung,
+        on="CIF_KH_VAY",
+        how="left",
+        validate="many_to_one",
+    )
 
-    cols = list(pivot_full.columns)
+    pivot_full["(blank)"] = pd.to_numeric(
+        pivot_full["(blank)"], errors="coerce"
+    ).fillna(0)
+
+    # 5. Cộng phần bổ sung vào tổng dư nợ CRM32
+    pivot_full["DƯ NỢ CRM32"] = (
+        pivot_full["DƯ NỢ CRM32"] + pivot_full["(blank)"]
+    )
+
+    # 6. Tính lại chênh lệch sau khi đã bổ sung
+    pivot_full["LECH"] = (
+        pivot_full["DƯ NỢ"] - pivot_full["DƯ NỢ CRM32"]
+    ).fillna(0)
+
+    # 7. Đưa cột (blank) đứng ngay trước DƯ NỢ CRM32
+    cols = pivot_full.columns.tolist()
     if "(blank)" in cols and "DƯ NỢ CRM32" in cols:
-        cols.insert(cols.index("DƯ NỢ CRM32"), cols.pop(cols.index("(blank)")))
+        cols.remove("(blank)")
+        cols.insert(cols.index("DƯ NỢ CRM32"), "(blank)")
         pivot_full = pivot_full[cols]
 
     # Nợ nhóm 2 / Nợ xấu

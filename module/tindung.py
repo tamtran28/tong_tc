@@ -416,12 +416,12 @@ def process_data(
 
     df_tt = df_55[
         [
-            "CUSTSEQLN",
-            "NMLOC",
+            "CIF_ID",
+            "TEN_KH",
             "KHE_UOC",
-            "SOTIENGIAINGAN",
-            "NGAYGN",
-            "NGAYDH",
+            "SO_TIEN_QD",
+            "NGAY_GIAI_NGAN",
+            "NGAY_DAO_HAN",
             "NGAY_TT",
             "LOAITIEN",
         ]
@@ -441,15 +441,18 @@ def process_data(
 
     df_gn = df_56[
         [
-            "CIF",
-            "TEN_KHACH_HANG",
+            "CIF_ID",
+            "TEN_KH",
             "KHE_UOC",
-            "SO_TIEN_GIAI_NGAN_VND",
+            "SO_TIEN_QD",
             "NGAY_GIAI_NGAN",
             "NGAY_DAO_HAN",
-            "LOAI_TIEN_HD",
+            "LOAI_TIEN",
         ]
     ].copy()
+    df_gn.columns = ['CIF', 'TEN_KHACH_HANG', 'KHE_UOC', 'SO_TIEN_GIAI_NGAN_VND',
+                 'NGAY_GIAI_NGAN', 'NGAY_DAO_HAN', 'LOAI_TIEN_HD']
+    
     df_gn["GIAI_NGAN_TT"] = "Giải ngân"
     df_gn["NGAY_GIAI_NGAN"] = pd.to_datetime(
         df_gn["NGAY_GIAI_NGAN"], format="%Y%m%d", errors="coerce"
